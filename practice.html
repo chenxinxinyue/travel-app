@@ -193,6 +193,13 @@ body {
   background: var(--primary-light); color: var(--primary-text);
 }
 .question-stem { font-size: 15px; line-height: 1.7; margin-bottom: 14px; }
+.familiar-btn {
+  font-size: 12px; padding: 3px 10px; border: 1px solid var(--border);
+  border-radius: 12px; background: #fff; color: var(--text-secondary);
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+  margin-left: auto; flex-shrink: 0;
+}
+.familiar-btn:hover { background: var(--success-light); border-color: var(--success); color: var(--success-text); }
 .options-list { display: flex; flex-direction: column; gap: 8px; }
 .option-btn {
   display: flex; align-items: center; gap: 10px;
@@ -847,6 +854,7 @@ function renderPractice(bankId, mode) {
         <span class="question-type-badge">${typeLabel}</span>
         ${isCorrect ? '<span style="color:var(--success-text);font-size:13px">✓ 正确</span>' : ''}
         ${isWrong ? '<span style="color:var(--danger-text);font-size:13px">✗ 错误</span>' : ''}
+        <button class="familiar-btn" data-qid="${q.id}" data-action="familiar">熟悉</button>
       </div>
       <div class="question-stem">${escHtml(q.stem)}</div>
       <div class="options-list">${optionsHtml}</div>
@@ -937,6 +945,56 @@ function updateSettleBar() {
   if (countEl) countEl.textContent = `已作答 ${answered} / ${state.questions.length} 题`;
   const settleBtn = document.querySelector('.settle-bar .btn-primary');
   if (settleBtn) settleBtn.disabled = answered === 0;
+}
+
+function handleFamiliarClick(e) {
+  const btn = e.target.closest('.familiar-btn');
+  if (!btn) return;
+  const state = _practiceState;
+  if (!state) return;
+
+  const qid = btn.dataset.qid;
+  if (!qid) return;
+
+  // 标记为熟练：正确次数设为 5，移出错题库
+  Store.updateQuestion(state.bankId, qid, { correctCount: 5, wrongCount: 0, wrongCorrectCount: 0 });
+
+  // 从当前题目列表中移除
+  state.questions = state.questions.filter(q => q.id !== qid);
+  delete state.answers[qid];
+
+  // 移除卡片 DOM
+  const card = document.getElementById('qcard-' + qid);
+  if (card) {
+    card.style.transition = 'opacity 0.3s, transform 0.3s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(20px)';
+    setTimeout(() => card.remove(), 300);
+  }
+
+  // 更新计数
+  updateSettleBar();
+  updateQuestionCount();
+
+  // 如果没题了，刷新页面展示空状态
+  if (state.questions.length === 0) {
+    setTimeout(() => refreshPracticeView(), 350);
+  }
+}
+
+function updateQuestionCount() {
+  const state = _practiceState;
+  if (!state) return;
+  // 更新顶部计数（简单方式：刷新header区域）
+  const container = document.querySelector('.container');
+  if (!container) return;
+  const infoEl = container.querySelector('div[style]');
+  if (!infoEl) return;
+  const prefix = state.mode === 'wrong' ? '待复习' : '未熟练';
+  const bank = Store.getBank(state.bankId);
+  if (!bank) return;
+  const mastered = state.mode === 'wrong' ? null : Store.countMastered(state.bankId);
+  infoEl.innerHTML = `共 ${state.questions.length} 题${prefix}${mastered !== null ? ' · 已熟练 ' + mastered + ' 题' : ''}`;
 }
 
 function changePage(delta) {
@@ -1138,6 +1196,7 @@ function confirmImport() {
 // ========== Init ==========
 // 选项点击事件委托（#app 不会被 innerHTML 替换，委托始终有效）
 document.getElementById('app').addEventListener('click', handleOptionClick);
+document.getElementById('app').addEventListener('click', handleFamiliarClick);
 
 onHashChange();
 </script>
