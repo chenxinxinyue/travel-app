@@ -832,13 +832,13 @@ function renderPractice(bankId, mode) {
       else if (isWrongSelected) optClass += ' wrong-answer';
       else if (selected) optClass += ' selected';
 
-      return `<button class="${optClass}" onclick="selectOption('${q.id}', '${letter}', '${q.type}')" ${state.settled ? 'disabled' : ''}>
+      return `<button class="${optClass}" data-qid="${q.id}" data-letter="${letter}" data-qtype="${q.type}" ${state.settled ? 'disabled' : ''}>
         <span class="option-letter">${letter}</span>
         <span>${escHtml(opt)}</span>
       </button>`;
     }).join('');
 
-    return `<div class="${cardClass}">
+    return `<div class="${cardClass}" id="qcard-${q.id}">
       <div class="question-header">
         <span class="question-num">#${globalIdx}</span>
         <span class="question-type-badge">${typeLabel}</span>
@@ -880,21 +880,60 @@ function renderPractice(bankId, mode) {
   </div>`;
 }
 
-function selectOption(questionId, letter, type) {
+function handleOptionClick(e) {
+  const btn = e.target.closest('.option-btn');
+  if (!btn || btn.disabled) return;
   const state = _practiceState;
   if (!state || state.settled) return;
 
+  const qid = btn.dataset.qid;
+  const letter = btn.dataset.letter;
+  const type = btn.dataset.qtype;
+  if (!qid || !letter || !type) return;
+
+  const card = document.getElementById('qcard-' + qid);
+  if (!card) return;
+
   if (type === 'multiple') {
-    if (!state.answers[questionId]) state.answers[questionId] = [];
-    const arr = state.answers[questionId];
+    if (!state.answers[qid]) state.answers[qid] = [];
+    const arr = state.answers[qid];
     const idx = arr.indexOf(letter);
     if (idx >= 0) arr.splice(idx, 1);
     else arr.push(letter);
+    btn.classList.toggle('selected');
+    const selLetter = btn.querySelector('.option-letter');
+    if (selLetter) {
+      if (idx >= 0) { selLetter.style.background = ''; selLetter.style.color = ''; }
+      else { selLetter.style.background = 'var(--primary)'; selLetter.style.color = '#fff'; }
+    }
   } else {
-    state.answers[questionId] = state.answers[questionId] === letter ? null : letter;
+    const prev = state.answers[qid];
+    state.answers[qid] = state.answers[qid] === letter ? null : letter;
+    card.querySelectorAll('.option-btn').forEach(b => {
+      b.classList.remove('selected');
+      const sl = b.querySelector('.option-letter');
+      if (sl) { sl.style.background = ''; sl.style.color = ''; }
+    });
+    if (state.answers[qid]) {
+      btn.classList.add('selected');
+      const sl = btn.querySelector('.option-letter');
+      if (sl) { sl.style.background = 'var(--primary)'; sl.style.color = '#fff'; }
+    }
   }
 
-  refreshPracticeView();
+  const isAnswered = state.answers[qid] != null && state.answers[qid] !== '' && (Array.isArray(state.answers[qid]) ? state.answers[qid].length > 0 : true);
+  card.classList.toggle('answered', isAnswered);
+  updateSettleBar();
+}
+
+function updateSettleBar() {
+  const state = _practiceState;
+  if (!state) return;
+  const answered = countAnswered(state);
+  const countEl = document.querySelector('.answered-count');
+  if (countEl) countEl.textContent = `已作答 ${answered} / ${state.questions.length} 题`;
+  const settleBtn = document.querySelector('.settle-bar .btn-primary');
+  if (settleBtn) settleBtn.disabled = answered === 0;
 }
 
 function changePage(delta) {
@@ -1094,6 +1133,9 @@ function confirmImport() {
 }
 
 // ========== Init ==========
+// 选项点击事件委托（#app 不会被 innerHTML 替换，委托始终有效）
+document.getElementById('app').addEventListener('click', handleOptionClick);
+
 onHashChange();
 </script>
 
