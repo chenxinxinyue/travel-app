@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>刷题练习</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f7f5f2;
+  --card: #ffffff;
+  --primary: #b8a9c9;
+  --primary-hover: #a898b8;
+  --primary-light: #ede6f3;
+  --primary-text: #7a6b8a;
+  --accent: #c4a882;
+  --text: #5d5a65;
+  --text-secondary: #9a95a5;
+  --border: #eae6e0;
+  --success: #a3b8a3;
+  --success-light: #e6f0e6;
+  --success-text: #5a7a5a;
+  --danger: #c9a0a0;
+  --danger-light: #f5e8e8;
+  --danger-text: #8a5a5a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* Layout */
+.app-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-header h1 { font-size: 20px; font-weight: 600; color: var(--primary-text); }
+.app-header .btn-back {
+  background: none; border: none; color: var(--text-secondary);
+  font-size: 15px; cursor: pointer; padding: 6px 12px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; gap: 4px;
+}
+.app-header .btn-back:hover { background: var(--bg); color: var(--text); }
+
+.container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  border: none; transition: all 0.2s;
+  font-family: inherit;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { background: var(--bg); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { opacity: 0.85; }
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+.btn-lg { padding: 14px 32px; font-size: 16px; border-radius: var(--radius); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Bank Card */
+.bank-card {
+  display: flex; align-items: center; gap: 20px;
+  padding: 20px 24px;
+}
+.bank-card .bank-info { flex: 1; min-width: 0; }
+.bank-card .bank-name { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.bank-card .bank-meta { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+.bank-card .progress-bar {
+  height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 4px;
+}
+.bank-card .progress-fill {
+  height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.4s;
+}
+.bank-card .bank-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.toggle {
+  width: 44px; height: 24px; background: var(--border); border-radius: 12px;
+  position: relative; cursor: pointer; transition: background 0.3s; flex-shrink: 0;
+}
+.toggle.active { background: var(--primary); }
+.toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; background: #fff; border-radius: 50%;
+  transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.toggle.active::after { transform: translateX(20px); }
+
+/* Empty State */
+.empty-state {
+  text-align: center; padding: 80px 20px; color: var(--text-secondary);
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty-state p { margin-bottom: 24px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+  animation: fadeIn 0.2s;
+}
+.modal {
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  width: 90%; max-width: 640px; max-height: 85vh; overflow-y: auto; padding: 32px;
+  animation: slideUp 0.25s;
+}
+.modal h2 { font-size: 20px; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+/* Upload Area */
+.upload-area {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 48px; text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.upload-area:hover, .upload-area.drag-over { border-color: var(--primary); background: var(--primary-light); }
+.upload-area .upload-icon { font-size: 40px; margin-bottom: 12px; }
+.upload-area p { color: var(--text-secondary); font-size: 14px; }
+.upload-area .hint { font-size: 12px; color: var(--text-secondary); margin-top: 8px; opacity: 0.7; }
+
+/* Preview */
+.preview-section { margin-top: 20px; }
+.preview-section h4 { font-size: 15px; margin-bottom: 12px; color: var(--text-secondary); }
+.preview-card {
+  background: var(--bg); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+.preview-card .q-type {
+  display: inline-block; font-size: 11px; padding: 2px 8px;
+  border-radius: 4px; background: var(--primary-light); color: var(--primary-text);
+  margin-bottom: 8px;
+}
+.preview-card .q-stem { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+.preview-card .q-options { font-size: 13px; color: var(--text-secondary); }
+.preview-card .q-answer { font-size: 13px; color: var(--success-text); margin-top: 4px; }
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary); }
+.form-input {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; font-family: inherit; color: var(--text); background: var(--bg);
+  transition: border-color 0.2s;
+}
+.form-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+
+/* Question Card */
+.question-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 12px; transition: border-color 0.2s;
+}
+.question-card.answered { border-color: var(--primary-light); }
+.question-card.correct { border-color: var(--success); background: var(--success-light); }
+.question-card.wrong { border-color: var(--danger); background: var(--danger-light); }
+.question-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.question-num { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.question-type-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 4px;
+  background: var(--primary-light); color: var(--primary-text);
+}
+.question-stem { font-size: 15px; line-height: 1.7; margin-bottom: 14px; }
+.options-list { display: flex; flex-direction: column; gap: 8px; }
+.option-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: #fff; cursor: pointer; font-size: 14px; font-family: inherit;
+  transition: all 0.15s; text-align: left;
+}
+.option-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+.option-btn.selected { border-color: var(--primary); background: var(--primary-light); font-weight: 500; }
+.option-btn.correct-answer { border-color: var(--success); background: var(--success-light); }
+.option-btn.wrong-answer { border-color: var(--danger); background: var(--danger-light); }
+.option-letter {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; flex-shrink: 0;
+}
+.option-btn.selected .option-letter { background: var(--primary); color: #fff; }
+.option-btn.correct-answer .option-letter { background: var(--success); color: #fff; }
+.option-btn.wrong-answer .option-letter { background: var(--danger); color: #fff; }
+
+/* Pagination */
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 20px 0;
+}
+.pagination .page-info { font-size: 14px; color: var(--text-secondary); }
+.pagination .btn { min-width: 80px; justify-content: center; }
+
+/* Settle Bar */
+.settle-bar {
+  position: sticky; bottom: 0; background: var(--card); border-top: 1px solid var(--border);
+  padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+}
+.settle-bar .answered-count { font-size: 14px; color: var(--text-secondary); }
+
+/* Results Modal */
+.result-summary { display: flex; gap: 24px; justify-content: center; margin: 24px 0; }
+.result-item { text-align: center; }
+.result-item .count { font-size: 42px; font-weight: 700; line-height: 1; }
+.result-item .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.result-item.correct .count { color: var(--success-text); }
+.result-item.wrong .count { color: var(--danger-text); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff; padding: 10px 24px;
+  border-radius: 20px; font-size: 14px; z-index: 300;
+  animation: slideUpToast 0.3s;
+}
+.toast.fade-out { animation: fadeOutToast 0.3s forwards; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUpToast { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes fadeOutToast { from { opacity: 1; } to { opacity: 0; } }
+
+/* Wrong bank link */
+.wrong-bank-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--danger-text); font-size: 13px; cursor: pointer;
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--danger-light); background: var(--danger-light);
+  transition: all 0.2s;
+}
+.wrong-bank-link:hover { opacity: 0.8; }
+
+/* Delete button */
+.btn-icon {
+  width: 32px; height: 32px; border-radius: 50%; border: none; background: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); font-size: 18px; transition: all 0.2s;
+}
+.btn-icon:hover { background: var(--danger-light); color: var(--danger); }
+
+/* Confirm dialog */
+.confirm-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center; z-index: 300;
+}
+.confirm-box {
+  background: var(--card); border-radius: var(--radius); padding: 24px;
+  box-shadow: var(--shadow-lg); max-width: 360px; width: 90%;
+}
+.confirm-box p { margin-bottom: 20px; font-size: 15px; }
+.confirm-box .actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .container { padding: 16px; }
+  .bank-card { flex-direction: column; align-items: stretch; }
+  .bank-card .bank-actions { justify-content: space-between; }
+  .modal { padding: 20px; width: 95%; }
+  .result-summary { gap: 16px; }
+  .settle-bar { flex-direction: column; gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+// ========== Store ==========
+const STORE_KEY = 'practice_app_data';
+
+const Store = {
+  _data: null,
+
+  _load() {
+    if (this._data) return this._data;
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      this._data = raw ? JSON.parse(raw) : { banks: [] };
+    } catch {
+      this._data = { banks: [] };
+    }
+    return this._data;
+  },
+
+  _save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(this._data));
+    } catch (e) {
+      showToast('保存失败，本地存储空间不足');
+    }
+  },
+
+  getBanks() {
+    return this._load().banks;
+  },
+
+  getBank(id) {
+    return this.getBanks().find(b => b.id === id) || null;
+  },
+
+  addBank(name, questions) {
+    const bank = {
+      id: 'bank_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+      name,
+      shuffle: false,
+      questions: questions.map(q => ({
+        ...q,
+        id: 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+        correctCount: 0,
+        wrongCount: 0,
+        wrongCorrectCount: 0,
+      })),
+    };
+    this._load().banks.push(bank);
+    this._save();
+    return bank;
+  },
+
+  updateBank(id, updates) {
+    const bank = this.getBank(id);
+    if (bank) {
+      Object.assign(bank, updates);
+      this._save();
+    }
+  },
+
+  deleteBank(id) {
+    const data = this._load();
+    data.banks = data.banks.filter(b => b.id !== id);
+    this._save();
+  },
+
+  updateQuestion(bankId, questionId, updates) {
+    const bank = this.getBank(bankId);
+    if (!bank) return;
+    const q = bank.questions.find(q => q.id === questionId);
+    if (q) {
+      Object.assign(q, updates);
+      this._save();
+    }
+  },
+
+  /** Settle a batch of questions and return counts */
+  settleQuestions(bankId, answers, mode) {
+    const bank = this.getBank(bankId);
+    if (!bank) return { correct: 0, wrong: 0 };
+
+    let correctCount = 0;
+    let wrongCount = 0;
+
+    for (const [qId, userAnswer] of Object.entries(answers)) {
+      if (userAnswer === null || userAnswer === undefined || userAnswer.length === 0) continue;
+
+      const q = bank.questions.find(q => q.id === qId);
+      if (!q) continue;
+
+      const isCorrect = checkAnswer(q, userAnswer);
+
+      if (mode === 'practice') {
+        if (isCorrect) {
+          q.correctCount = Math.min(q.correctCount + 1, 5);
+          correctCount++;
+        } else {
+          q.wrongCount++;
+          wrongCount++;
+        }
+      } else {
+        // Wrong bank mode
+        if (isCorrect) {
+          q.wrongCorrectCount++;
+          if (q.wrongCorrectCount >= 2) {
+            q.wrongCount = 0;
+            q.wrongCorrectCount = 0;
+          }
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
+      }
+    }
+
+    this._save();
+    return { correct: correctCount, wrong: wrongCount };
+  },
+
+  /** Count wrong questions in a bank */
+  countWrong(bankId) {
+    const bank = this.getBank(bankId);
+    if (!bank) return 0;
+    return bank.questions.filter(q => q.wrongCount > 0).length;
+  },
+
+  /** Count mastered questions in a bank */
+  countMastered(bankId) {
+    const bank = this.getBank(bankId);
+    if (!bank) return 0;
+    return bank.questions.filter(q => q.correctCount >= 5).length;
+  }
+};
+
+// ========== Helpers ==========
+function checkAnswer(question, userAnswer) {
+  if (question.type === 'multiple') {
+    const correct = Array.isArray(question.correctAnswer) ? question.correctAnswer : [question.correctAnswer];
+    const user = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+    if (correct.length !== user.length) return false;
+    const sortedCorrect = [...correct].sort();
+    const sortedUser = [...user].sort();
+    return sortedCorrect.every((c, i) => c === sortedUser[i]);
+  }
+  return userAnswer === question.correctAnswer;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showToast(msg, duration = 2000) {
+  const root = document.getElementById('toast-root');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  root.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+function showConfirm(msg) {
+  return new Promise(resolve => {
+    const root = document.getElementById('modal-root');
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `<div class="confirm-box">
+      <p>${msg}</p>
+      <div class="actions">
+        <button class="btn btn-outline btn-sm" id="confirm-cancel">取消</button>
+        <button class="btn btn-danger btn-sm" id="confirm-ok">确认删除</button>
+      </div>
+    </div>`;
+    root.appendChild(overlay);
+    overlay.querySelector('#confirm-cancel').onclick = () => { overlay.remove(); resolve(false); };
+    overlay.querySelector('#confirm-ok').onclick = () => { overlay.remove(); resolve(true); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+  });
+}
+
+// ========== Router ==========
+function onHashChange() {
+  const hash = location.hash.slice(1) || 'home';
+  const app = document.getElementById('app');
+  const modalRoot = document.getElementById('modal-root');
+
+  // Clear modals
+  modalRoot.innerHTML = '';
+
+  if (hash === 'home') {
+    app.innerHTML = renderHome();
+  } else if (hash.startsWith('practice/')) {
+    const bankId = hash.slice('practice/'.length);
+    app.innerHTML = renderPractice(bankId, 'practice');
+  } else if (hash.startsWith('wrong/')) {
+    const bankId = hash.slice('wrong/'.length);
+    app.innerHTML = renderPractice(bankId, 'wrong');
+  } else {
+    location.hash = '#home';
+  }
+
+  // Re-bind header back button
+  const backBtn = document.getElementById('header-back');
+  if (backBtn) {
+    backBtn.onclick = () => { location.hash = '#home'; };
+  }
+}
+
+window.addEventListener('hashchange', onHashChange);
+
+// ========== Excel Parser ==========
+const Parser = {
+  TYPE_KEYWORDS: ['题型', '类型', 'type', '题目类型', '题目类别'],
+  STEM_KEYWORDS: ['题干', '题目', 'stem', 'question', '问题', '题目内容', '标题'],
+  OPTION_KEYWORDS: ['选项', 'options', 'option', '选项内容', '备选项'],
+  ANSWER_KEYWORDS: ['正确答案', '答案', 'answer', '正确选项', '解答'],
+
+  findColumn(headers, keywords) {
+    return headers.findIndex(h => {
+      if (!h && h !== 0) return false;
+      const s = String(h).toLowerCase().trim();
+      return keywords.some(k => s.includes(k.toLowerCase()));
+    });
+  },
+
+  findIndividualOptionCols(headers) {
+    const cols = [];
+    for (const letter of ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']) {
+      const idx = headers.findIndex(h => {
+        if (!h && h !== 0) return false;
+        const s = String(h).trim().toUpperCase();
+        return s === letter || s === `选项${letter}` || s === `选项 ${letter}` || s === `选项${letter.toUpperCase()}`;
+      });
+      if (idx >= 0) cols.push({ letter, index: idx });
+    }
+    return cols;
+  },
+
+  parseType(cell) {
+    if (!cell && cell !== 0) return 'single';
+    const s = String(cell).toLowerCase().trim();
+    if (/多选|multiple|多选|不定项/.test(s)) return 'multiple';
+    if (/判断|truefalse|判断|tf|对错|是非/.test(s)) return 'truefalse';
+    if (/单选|single|单选/.test(s)) return 'single';
+    return 'single';
+  },
+
+  parseOptionsFromCell(cell) {
+    if (!cell && cell !== 0) return [];
+    const text = String(cell).trim();
+    const lines = text.split(/[\n\r]+/).filter(l => l.trim());
+    if (lines.length === 0) return [];
+    const hasPrefix = lines.every(l => /^[A-Z][.、．)\s]/.test(l.trim()));
+    return lines.map(l => hasPrefix ? l.replace(/^[A-Z][.、．)\s]+/, '').trim() : l.trim());
+  },
+
+  parseAnswer(cell, type) {
+    if (!cell && cell !== 0) return type === 'multiple' ? [] : '';
+    const s = String(cell).trim();
+
+    if (type === 'truefalse') {
+      if (/^(对|正确|√|✓|A|a|true|yes|是)$/i.test(s)) return '对';
+      if (/^(错|错误|×|✗|B|b|false|no|否)$/i.test(s)) return '错';
+      return s;
+    }
+
+    if (type === 'multiple') {
+      // "A,B", "A、B", "AB", "A B" etc
+      const cleaned = s.replace(/[、，,|\s]+/g, ',').replace(/[.．]/g, '');
+      const parts = cleaned.split(',').filter(Boolean);
+      if (parts.length === 1 && parts[0].length > 1) {
+        // "AB" format
+        return parts[0].split('').filter(c => /[A-Za-z]/.test(c)).map(c => c.toUpperCase());
+      }
+      return parts.map(p => p.trim().toUpperCase()).filter(p => /^[A-Z]$/i.test(p));
+    }
+
+    // Single choice
+    const m = s.match(/^[A-Za-z]/);
+    return m ? m[0].toUpperCase() : s;
+  },
+
+  parseFile(workbook) {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!data || data.length < 2) {
+      throw new Error('Excel 文件为空或只有表头');
+    }
+
+    const headers = data[0].map(h => (h !== undefined && h !== null) ? h : '');
+    const typeCol = this.findColumn(headers, this.TYPE_KEYWORDS);
+    const stemCol = this.findColumn(headers, this.STEM_KEYWORDS);
+    const optionCol = this.findColumn(headers, this.OPTION_KEYWORDS);
+    const answerCol = this.findColumn(headers, this.ANSWER_KEYWORDS);
+    const individualOptCols = this.findIndividualOptionCols(headers);
+
+    if (stemCol < 0) throw new Error('未识别到"题干"列，请检查 Excel 表头');
+    if (answerCol < 0) throw new Error('未识别到"正确答案"列，请检查 Excel 表头');
+    if (optionCol < 0 && individualOptCols.length === 0) {
+      throw new Error('未识别到"选项"列，请检查 Excel 表头。支持：单独的选项列（如 A, B, C, D）或包含所有选项的"选项"列');
+    }
+
+    const questions = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const stem = String(row[stemCol] || '').trim();
+      if (!stem) continue; // skip empty rows
+
+      const type = this.parseType(typeCol >= 0 ? row[typeCol] : null);
+
+      let options;
+      if (individualOptCols.length > 0) {
+        options = individualOptCols.map(c => String(row[c.index] || '').trim()).filter(o => o);
+      } else if (optionCol >= 0) {
+        options = this.parseOptionsFromCell(row[optionCol]);
+      } else {
+        options = [];
+      }
+
+      // True/false default options
+      if (options.length === 0 && type === 'truefalse') {
+        options = ['对', '错'];
+      }
+
+      if (options.length === 0) continue;
+
+      const correctAnswer = this.parseAnswer(row[answerCol], type);
+      if (type === 'multiple' && Array.isArray(correctAnswer) && correctAnswer.length === 0) continue;
+      if ((type === 'single' || type === 'truefalse') && !correctAnswer) continue;
+
+      questions.push({ type, stem, options, correctAnswer });
+    }
+
+    if (questions.length === 0) throw new Error('未能解析到有效题目，请检查数据格式');
+    return questions;
+  }
+};
+
+// ========== Render: Home ==========
+function renderHome() {
+  const banks = Store.getBanks();
+
+  let banksHtml = '';
+  if (banks.length === 0) {
+    banksHtml = `<div class="empty-state">
+      <div class="empty-icon">📚</div>
+      <h3>还没有题库</h3>
+      <p>导入 Excel 文件来创建你的第一个题库吧</p>
+      <button class="btn btn-primary btn-lg" onclick="openImportModal()">导入题库</button>
+    </div>`;
+  } else {
+    banksHtml = banks.map(bank => {
+      const total = bank.questions.length;
+      const mastered = Store.countMastered(bank.id);
+      const wrongCount = Store.countWrong(bank.id);
+      const progressPct = total > 0 ? Math.round((mastered / total) * 100) : 0;
+
+      return `<div class="card bank-card">
+        <div class="bank-info">
+          <div class="bank-name">${escHtml(bank.name)}</div>
+          <div class="bank-meta">
+            ${total} 题 · 已熟练 ${mastered} 题${total > 0 ? ' (' + progressPct + '%)' : ''}
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${progressPct}%"></div>
+          </div>
+          ${wrongCount > 0 ? `<span class="wrong-bank-link" style="margin-top:8px" onclick="event.stopPropagation();location.hash='#wrong/${bank.id}'">错题库 (${wrongCount})</span>` : ''}
+        </div>
+        <div class="bank-actions">
+          <div class="toggle-row" style="margin-right:8px">
+            <span>随机</span>
+            <div class="toggle${bank.shuffle ? ' active' : ''}" onclick="event.stopPropagation();toggleShuffle('${bank.id}')"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="location.hash='#practice/${bank.id}'">开始练习</button>
+          <button class="btn-icon" onclick="event.stopPropagation();deleteBank('${bank.id}')" title="删除题库">×</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  return `<div class="app-header">
+    <h1>刷题练习</h1>
+    ${banks.length > 0 ? `<button class="btn btn-primary btn-sm" onclick="openImportModal()">+ 导入题库</button>` : ''}
+  </div>
+  <div class="container">${banksHtml}</div>`;
+}
+
+function escHtml(str) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return str.replace(/[&<>"']/g, c => map[c]);
+}
+
+async function deleteBank(id) {
+  const bank = Store.getBank(id);
+  if (!bank) return;
+  const ok = await showConfirm(`确定要删除题库「${bank.name}」吗？此操作不可恢复。`);
+  if (ok) {
+    Store.deleteBank(id);
+    onHashChange();
+    showToast('题库已删除');
+  }
+}
+
+function toggleShuffle(bankId) {
+  const bank = Store.getBank(bankId);
+  if (!bank) return;
+  Store.updateBank(bankId, { shuffle: !bank.shuffle });
+  onHashChange();
+}
+
+// ========== Render: Practice ==========
+let _practiceState = null;
+
+function initPracticeState(bankId, mode) {
+  const bank = Store.getBank(bankId);
+  if (!bank) return null;
+
+  let questions;
+  if (mode === 'practice') {
+    questions = bank.questions.filter(q => q.correctCount < 5);
+  } else {
+    questions = bank.questions.filter(q => q.wrongCount > 0);
+  }
+
+  if (bank.shuffle && mode === 'practice') {
+    questions = shuffle(questions);
+  }
+
+  return {
+    bankId,
+    bankName: bank.name,
+    mode,
+    questions,
+    answers: {},
+    page: 0,
+    pageSize: 50,
+    settled: false,
+    settleResult: null,
+  };
+}
+
+function getPageQuestions(state) {
+  const start = state.page * state.pageSize;
+  return state.questions.slice(start, start + state.pageSize);
+}
+
+function totalPages(state) {
+  return Math.ceil(state.questions.length / state.pageSize) || 1;
+}
+
+function countAnswered(state) {
+  return Object.values(state.answers).filter(a => a !== null && a !== undefined && (Array.isArray(a) ? a.length > 0 : true)).length;
+}
+
+function renderPractice(bankId, mode) {
+  const bank = Store.getBank(bankId);
+  if (!bank) {
+    location.hash = '#home';
+    return '';
+  }
+
+  // Re-init state when entering practice page, or reuse existing for the same session
+  if (!_practiceState || _practiceState.bankId !== bankId || _practiceState.mode !== mode) {
+    _practiceState = initPracticeState(bankId, mode);
+  }
+  const state = _practiceState;
+  if (!state) { location.hash = '#home'; return ''; }
+
+  // Empty state
+  if (state.questions.length === 0) {
+    const msg = mode === 'practice'
+      ? '所有题目都已熟练掌握！'
+      : '错题库为空，没有需要复习的错题';
+    return `<div class="app-header">
+      <button class="btn-back" id="header-back">← 返回</button>
+      <h1>${escHtml(bank.name)}${mode === 'wrong' ? ' - 错题库' : ''}</h1>
+      <div></div>
+    </div>
+    <div class="container"><div class="empty-state">
+      <div class="empty-icon">🎉</div>
+      <h3>${msg}</h3>
+      ${mode === 'practice' && Store.countWrong(bankId) > 0
+        ? `<p><span class="wrong-bank-link" onclick="location.hash='#wrong/${bankId}'">查看错题库 (${Store.countWrong(bankId)})</span></p>`
+        : ''}
+      <button class="btn btn-primary" onclick="location.hash='#home'">返回首页</button>
+    </div></div>`;
+  }
+
+  const pageQuestions = getPageQuestions(state);
+  const pages = totalPages(state);
+  const answered = countAnswered(state);
+  const isWrongMode = mode === 'wrong';
+  const mastered = isWrongMode ? null : Store.countMastered(bankId);
+  const wrongCount = isWrongMode ? state.questions.length : Store.countWrong(bankId);
+
+  let questionsHtml = pageQuestions.map((q, i) => {
+    const globalIdx = state.page * state.pageSize + i + 1;
+    const userAnswer = state.answers[q.id];
+    const isAnswered = userAnswer !== undefined && userAnswer !== null && (Array.isArray(userAnswer) ? userAnswer.length > 0 : true);
+    const isCorrect = state.settled && state.settleResult ? state.settleResult.details[q.id] === 'correct' : null;
+    const isWrong = state.settled && state.settleResult ? state.settleResult.details[q.id] === 'wrong' : null;
+
+    let cardClass = 'question-card';
+    if (isCorrect) cardClass += ' correct';
+    else if (isWrong) cardClass += ' wrong';
+    else if (isAnswered) cardClass += ' answered';
+
+    const typeLabel = q.type === 'single' ? '单选题' : q.type === 'multiple' ? '多选题' : '判断题';
+
+    let optionsHtml = q.options.map((opt, oi) => {
+      const letter = String.fromCharCode(65 + oi);
+      const selected = q.type === 'multiple'
+        ? (Array.isArray(userAnswer) && userAnswer.includes(letter))
+        : (userAnswer === letter);
+      const isCorrectOpt = state.settled && q.correctAnswer !== undefined && (
+        q.type === 'multiple'
+          ? Array.isArray(q.correctAnswer) && q.correctAnswer.includes(letter)
+          : q.correctAnswer === letter
+      );
+      const isWrongSelected = state.settled && selected && !isCorrectOpt;
+
+      let optClass = 'option-btn';
+      if (isCorrectOpt && state.settled) optClass += ' correct-answer';
+      else if (isWrongSelected) optClass += ' wrong-answer';
+      else if (selected) optClass += ' selected';
+
+      return `<button class="${optClass}" onclick="selectOption('${q.id}', '${letter}', '${q.type}')" ${state.settled ? 'disabled' : ''}>
+        <span class="option-letter">${letter}</span>
+        <span>${escHtml(opt)}</span>
+      </button>`;
+    }).join('');
+
+    return `<div class="${cardClass}">
+      <div class="question-header">
+        <span class="question-num">#${globalIdx}</span>
+        <span class="question-type-badge">${typeLabel}</span>
+        ${isCorrect ? '<span style="color:var(--success-text);font-size:13px">✓ 正确</span>' : ''}
+        ${isWrong ? '<span style="color:var(--danger-text);font-size:13px">✗ 错误</span>' : ''}
+      </div>
+      <div class="question-stem">${escHtml(q.stem)}</div>
+      <div class="options-list">${optionsHtml}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="app-header">
+    <button class="btn-back" id="header-back">← 返回</button>
+    <h1>${escHtml(bank.name)}${isWrongMode ? ' - 错题库' : ''}</h1>
+    <div></div>
+  </div>
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:14px;color:var(--text-secondary)">
+      <span>共 ${state.questions.length} 题${isWrongMode ? '待复习' : '未熟练'}${!isWrongMode && mastered !== null ? ' · 已熟练 ' + mastered + ' 题' : ''}</span>
+      ${!isWrongMode && wrongCount > 0 ? `<span class="wrong-bank-link" onclick="location.hash='#wrong/${bankId}'">错题库 (${wrongCount})</span>` : ''}
+    </div>
+    ${questionsHtml}
+    ${pages > 1 ? `<div class="pagination">
+      <button class="btn btn-outline btn-sm" onclick="changePage(-1)" ${state.page === 0 ? 'disabled' : ''}>上一页</button>
+      <span class="page-info">第 ${state.page + 1} / ${pages} 页</span>
+      <button class="btn btn-outline btn-sm" onclick="changePage(1)" ${state.page >= pages - 1 ? 'disabled' : ''}>下一页</button>
+    </div>` : ''}
+    <div style="height:80px"></div>
+  </div>
+  <div class="settle-bar">
+    <span class="answered-count">已作答 ${answered} / ${state.questions.length} 题</span>
+    ${state.settled
+      ? `<div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="continuePractice()">继续练习</button>
+          <button class="btn btn-primary" onclick="location.hash='#home'">返回首页</button>
+        </div>`
+      : `<button class="btn btn-primary btn-lg" onclick="doSettle()" ${answered === 0 ? 'disabled' : ''}>结算</button>`
+    }
+  </div>`;
+}
+
+function selectOption(questionId, letter, type) {
+  const state = _practiceState;
+  if (!state || state.settled) return;
+
+  if (type === 'multiple') {
+    if (!state.answers[questionId]) state.answers[questionId] = [];
+    const arr = state.answers[questionId];
+    const idx = arr.indexOf(letter);
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(letter);
+  } else {
+    state.answers[questionId] = state.answers[questionId] === letter ? null : letter;
+  }
+
+  refreshPracticeView();
+}
+
+function changePage(delta) {
+  if (!_practiceState) return;
+  const newPage = _practiceState.page + delta;
+  if (newPage < 0 || newPage >= totalPages(_practiceState)) return;
+  _practiceState.page = newPage;
+  refreshPracticeView();
+}
+
+function doSettle() {
+  const state = _practiceState;
+  if (!state || state.settled) return;
+
+  // Filter: only grade answered questions
+  const gradedAnswers = {};
+  for (const [qId, ans] of Object.entries(state.answers)) {
+    if (ans !== null && ans !== undefined && (Array.isArray(ans) ? ans.length > 0 : true)) {
+      gradedAnswers[qId] = ans;
+    }
+  }
+
+  const result = Store.settleQuestions(state.bankId, gradedAnswers, state.mode);
+  state.settled = true;
+
+  // Build detail map
+  const details = {};
+  for (const [qId, userAnswer] of Object.entries(gradedAnswers)) {
+    const q = state.questions.find(q => q.id === qId);
+    if (!q) continue;
+    details[qId] = checkAnswer(q, userAnswer) ? 'correct' : 'wrong';
+  }
+
+  state.settleResult = { ...result, details };
+  refreshPracticeView();
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function continuePractice() {
+  _practiceState = null;
+  onHashChange();
+}
+
+function refreshPracticeView() {
+  const state = _practiceState;
+  if (!state) return;
+  const app = document.getElementById('app');
+  app.innerHTML = renderPractice(state.bankId, state.mode);
+
+  // Re-bind back button
+  const backBtn = document.getElementById('header-back');
+  if (backBtn) {
+    backBtn.onclick = () => {
+      _practiceState = null;
+      location.hash = '#home';
+    };
+  }
+
+  // Scroll to top of questions
+  const firstCard = app.querySelector('.question-card');
+  if (firstCard) {
+    firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// ========== Render: Import Modal ==========
+let _importPreview = null;
+let _importFileName = '';
+
+function openImportModal() {
+  _importPreview = null;
+  _importFileName = '';
+  showImportModal();
+}
+
+function showImportModal() {
+  const root = document.getElementById('modal-root');
+  const previewHtml = _importPreview
+    ? renderPreview(_importPreview)
+    : '';
+
+  root.innerHTML = `<div class="modal-overlay" id="import-overlay">
+    <div class="modal">
+      <h2>导入题库</h2>
+      ${!_importPreview ? `<div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">📁</div>
+        <p>点击上传或拖拽 Excel 文件到此处</p>
+        <p class="hint">支持 .xlsx / .xls 格式。表头需包含：题型、题干、选项、正确答案</p>
+        <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event)">
+      </div>` : ''}
+      ${previewHtml}
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeImportModal()">${_importPreview ? '取消' : '关闭'}</button>
+        ${_importPreview ? `<button class="btn btn-primary" onclick="confirmImport()">确认导入 (${_importPreview.length} 题)</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+
+  // Bind events
+  const overlay = document.getElementById('import-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeImportModal(); });
+  }
+
+  const uploadArea = document.getElementById('upload-area');
+  if (uploadArea) {
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+    uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('drag-over'); });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    });
+  }
+
+  const nameInput = document.getElementById('bank-name-input');
+  if (nameInput) {
+    nameInput.focus();
+    nameInput.select();
+  }
+}
+
+function renderPreview(questions) {
+  const previewCount = Math.min(3, questions.length);
+  const previewCards = questions.slice(0, previewCount).map((q, i) => {
+    const typeLabel = q.type === 'single' ? '单选题' : q.type === 'multiple' ? '多选题' : '判断题';
+    const answerStr = q.type === 'multiple' ? (Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer) : q.correctAnswer;
+    return `<div class="preview-card">
+      <div class="q-type">${typeLabel}</div>
+      <div class="q-stem">${i + 1}. ${escHtml(q.stem)}</div>
+      <div class="q-options">选项：${q.options.map((o, oi) => String.fromCharCode(65 + oi) + '. ' + escHtml(o)).join('；')}</div>
+      <div class="q-answer">正确答案：${escHtml(answerStr)}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="preview-section">
+    <h4>预览（共 ${questions.length} 题，显示前 ${previewCount} 题）</h4>
+    ${previewCards}
+    ${questions.length > 3 ? `<p style="font-size:13px;color:var(--text-secondary);margin-top:8px">... 还有 ${questions.length - 3} 题</p>` : ''}
+  </div>
+  <div class="form-group" style="margin-top:16px">
+    <label for="bank-name-input">题库名称</label>
+    <input class="form-input" id="bank-name-input" value="${escHtml(_importFileName.replace(/\.(xlsx|xls)$/i, ''))}" placeholder="请输入题库名称">
+  </div>`;
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    showToast('请上传 .xlsx 或 .xls 格式的文件');
+    return;
+  }
+
+  _importFileName = file.name;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const workbook = XLSX.read(e.target.result, { type: 'array' });
+      const questions = Parser.parseFile(workbook);
+      _importPreview = questions;
+      showImportModal();
+    } catch (err) {
+      showToast('解析失败：' + err.message);
+      console.error(err);
+    }
+  };
+  reader.onerror = () => {
+    showToast('文件读取失败，请重试');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function closeImportModal() {
+  _importPreview = null;
+  _importFileName = '';
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+function confirmImport() {
+  if (!_importPreview || _importPreview.length === 0) return;
+
+  const nameInput = document.getElementById('bank-name-input');
+  const name = (nameInput ? nameInput.value.trim() : '') || _importFileName.replace(/\.(xlsx|xls)$/i, '') || '未命名题库';
+
+  Store.addBank(name, _importPreview);
+  closeImportModal();
+  onHashChange();
+  showToast(`题库「${name}」导入成功，共 ${_importPreview.length} 题`);
+}
+
+// ========== Init ==========
+onHashChange();
+</script>
+
+</body>
+</html>
