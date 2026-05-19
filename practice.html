@@ -495,6 +495,9 @@ function onHashChange() {
   // Clear modals
   modalRoot.innerHTML = '';
 
+  // 每次导航都重置练习状态，确保随机开关、题库变更等生效
+  _practiceState = null;
+
   if (hash === 'home') {
     app.innerHTML = renderHome();
   } else if (hash.startsWith('practice/')) {
