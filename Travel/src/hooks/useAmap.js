@@ -37,8 +37,11 @@ export default function useAmap(containerRef) {
         center: [116.397428, 39.90923], // default Beijing, will be overridden by geolocation
       });
 
-      mapInstance.addControl(new amap.Scale());
-      mapInstance.addControl(new amap.ToolBar({ position: 'RT' }));
+      // Controls loaded asynchronously after map init
+      amap.plugin(['AMap.Scale', 'AMap.ToolBar'], () => {
+        mapInstance.addControl(new amap.Scale());
+        mapInstance.addControl(new amap.ToolBar({ position: 'RT' }));
+      });
 
       setMap(mapInstance);
       setReady(true);
