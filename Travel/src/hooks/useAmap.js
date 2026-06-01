@@ -105,25 +105,55 @@ export default function useAmap(containerRef) {
     map.setFitView(positions.map((p) => new AMap.LngLat(p.lng, p.lat)));
   }, [map, AMap]);
 
-  // POI search
+  // POI search — try PlaceSearch first, fall back to AutoComplete
   const searchPOI = useCallback(async (keyword, city) => {
     if (!AMap) return [];
-    return new Promise((resolve) => {
+
+    // Try PlaceSearch
+    const placeResults = await new Promise((resolve) => {
       AMap.plugin('AMap.PlaceSearch', () => {
-        const search = new AMap.PlaceSearch({
-          city,
-          pageSize: 20,
-          extensions: 'all',
-        });
-        search.search(keyword, (status, result) => {
-          if (status === 'complete' && result.poiList) {
-            resolve(result.poiList.pois);
-          } else {
-            resolve([]);
-          }
-        });
+        try {
+          const search = new AMap.PlaceSearch({
+            city: city || undefined,
+            pageSize: 20,
+            extensions: 'all',
+          });
+          search.search(keyword, (status, result) => {
+            if (status === 'complete') {
+              const pois = result?.poiList?.pois || result?.pois || [];
+              resolve(pois);
+            } else {
+              resolve(null); // null means PlaceSearch failed, try fallback
+            }
+          });
+        } catch { resolve(null); }
       });
     });
+
+    if (placeResults && placeResults.length > 0) return placeResults;
+
+    // Fallback: use AutoComplete
+    const autoResults = await new Promise((resolve) => {
+      AMap.plugin('AMap.AutoComplete', () => {
+        try {
+          const auto = new AMap.AutoComplete({
+            city: city || undefined,
+          });
+          auto.search(keyword, (status, result) => {
+            if (status === 'complete' && result.tips) {
+              resolve(result.tips.filter((t) => t.location).map((t) => ({
+                id: t.id, name: t.name, address: t.address || t.district || '',
+                location: t.location,
+              })));
+            } else {
+              resolve([]);
+            }
+          });
+        } catch { resolve([]); }
+      });
+    });
+
+    return autoResults;
   }, [AMap]);
 
   // Add a participant location marker
