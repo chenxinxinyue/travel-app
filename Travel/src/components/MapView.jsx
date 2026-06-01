@@ -3,7 +3,7 @@ import useAmap from '../hooks/useAmap';
 
 export default function MapView({ spots, participants, onMapReady }) {
   const containerRef = useRef(null);
-  const { map, AMap, ready, locateMe, addMarker, clearMarkers, fitView } = useAmap(containerRef);
+  const { map, AMap, ready, locateMe, addMarker, clearMarkers, fitView, searchPOI, markersRef } = useAmap(containerRef);
   const firstLocateRef = useRef(false);
 
   // Auto-locate on first load
@@ -16,7 +16,7 @@ export default function MapView({ spots, participants, onMapReady }) {
 
   // Notify parent when map is ready
   useEffect(() => {
-    if (ready && map) onMapReady?.({ map, AMap, locateMe, addMarker, clearMarkers, fitView });
+    if (ready && map) onMapReady?.({ map, AMap, locateMe, addMarker, clearMarkers, fitView, searchPOI, markersRef });
   }, [ready, map, AMap]);
 
   // Update markers when spots change
@@ -35,7 +35,7 @@ export default function MapView({ spots, participants, onMapReady }) {
     });
 
     if (positions.length > 0) fitView(positions);
-  }, [spots, ready]);
+  }, [spots, ready, AMap, addMarker, clearMarkers, fitView]);
 
   return (
     <div ref={containerRef} className="w-full h-full" />
