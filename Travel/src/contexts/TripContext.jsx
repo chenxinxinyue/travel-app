@@ -38,28 +38,39 @@ export function TripProvider({ children }) {
 
   const loadTrips = useCallback(async () => {
     setLoading(true);
-    await ensureAuth();
-    const { data } = await db.collection('trips').orderBy('created_at', 'desc').get();
-    if (data) setTrips(data);
-    setLoading(false);
+    try {
+      await ensureAuth();
+      const { data } = await db.collection('trips').orderBy('created_at', 'desc').get();
+      if (data) setTrips(data);
+    } catch (e) {
+      console.error('loadTrips error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
 
   const loadTrip = useCallback(async (tripId) => {
+    if (!tripId) return;
     setLoading(true);
-    await ensureAuth();
-    const [tripRes, partRes, spotRes, billRes] = await Promise.all([
-      db.collection('trips').doc(tripId).get(),
-      db.collection('participants').where({ trip_id: tripId }).get(),
-      db.collection('spots').where({ trip_id: tripId }).orderBy('day_number', 'asc').get(),
-      db.collection('bills').where({ trip_id: tripId }).orderBy('created_at', 'desc').get(),
-    ]);
-    if (tripRes.data && tripRes.data.length > 0) setCurrentTrip(tripRes.data[0]);
-    if (partRes.data) setParticipants(partRes.data);
-    if (spotRes.data) setSpots(spotRes.data);
-    if (billRes.data) setBills(billRes.data);
-    setLoading(false);
+    try {
+      await ensureAuth();
+      const [tripRes, partRes, spotRes, billRes] = await Promise.all([
+        db.collection('trips').doc(tripId).get(),
+        db.collection('participants').where({ trip_id: tripId }).get(),
+        db.collection('spots').where({ trip_id: tripId }).orderBy('day_number', 'asc').get(),
+        db.collection('bills').where({ trip_id: tripId }).orderBy('created_at', 'desc').get(),
+      ]);
+      if (tripRes.data && tripRes.data.length > 0) setCurrentTrip(tripRes.data[0]);
+      if (partRes.data) setParticipants(partRes.data);
+      if (spotRes.data) setSpots(spotRes.data);
+      if (billRes.data) setBills(billRes.data);
+    } catch (e) {
+      console.error('loadTrip error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const createTrip = async ({ title, destination, startDate, endDate, nickname }) => {

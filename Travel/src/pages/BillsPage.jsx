@@ -16,8 +16,12 @@ export default function BillsPage() {
   const total = bills.reduce((sum, b) => sum + b.amount, 0);
 
   const handleDelete = async (billId) => {
-    await deleteBill(billId);
-    await loadTrip(id);
+    try {
+      await deleteBill(billId);
+      await loadTrip(id);
+    } catch (err) {
+      alert('删除失败: ' + (err.message || '请重试'));
+    }
   };
 
   return (

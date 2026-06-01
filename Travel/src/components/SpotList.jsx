@@ -17,6 +17,8 @@ export default function SpotList({ results, tripId, spots }) {
       await addSpot(tripId, dayPicker, dayNumber);
       await loadTrip(tripId);
       setDayPicker(null);
+    } catch (err) {
+      alert('添加失败: ' + (err.message || '请重试'));
     } finally {
       setAdding(false);
     }
