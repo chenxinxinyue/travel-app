@@ -17,7 +17,8 @@ export function useSpots() {
   };
 
   const removeSpot = async (spotId) => {
-    await supabase.from('spots').delete().eq('id', spotId);
+    const { error } = await supabase.from('spots').delete().eq('id', spotId);
+    if (error) throw error;
   };
 
   const loadSpots = async (tripId) => {
