@@ -4,6 +4,7 @@ import { useTrip } from '../contexts/TripContext';
 import MapView from '../components/MapView';
 import SpotSearch from '../components/SpotSearch';
 import SpotList from '../components/SpotList';
+import Timeline from '../components/Timeline';
 
 export default function TripPage() {
   const { id } = useParams();
@@ -34,7 +35,7 @@ export default function TripPage() {
         <div className="flex-1 overflow-auto">
           {tab === 'list'
             ? <SpotList results={searchResults} tripId={id} spots={spots} />
-            : <div className="flex items-center justify-center h-full text-gray-300 text-sm">即将实现</div>
+            : <Timeline spots={spots} tripId={id} currentTrip={currentTrip} />
           }
         </div>
       </div>
