@@ -33,11 +33,13 @@ export default function TripPage() {
   const shareLocation = async () => {
     if (!mapRef.current) return;
     setSharingLocation(true);
+    const timeout = setTimeout(() => setSharingLocation(false), 15000);
     try {
       const { AMap } = mapRef.current;
       AMap.plugin('AMap.Geolocation', () => {
         const geolocation = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
         geolocation.getCurrentPosition(async (status, result) => {
+          clearTimeout(timeout);
           if (status === 'complete') {
             const myInfo = getMyParticipant(id);
             if (myInfo) {
@@ -47,14 +49,14 @@ export default function TripPage() {
                 lat: result.position.lat,
                 lng: result.position.lng,
                 updated_at: new Date().toISOString(),
-              }, { onConflict: 'participant_id' });
+              }, { onConflict: 'trip_id,participant_id' });
               await loadTrip(id);
             }
           }
           setSharingLocation(false);
         });
       });
-    } catch { setSharingLocation(false); }
+    } catch { clearTimeout(timeout); setSharingLocation(false); }
   };
 
   return (

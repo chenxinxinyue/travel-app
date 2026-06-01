@@ -34,7 +34,8 @@ create table locations (
   participant_id uuid references participants on delete cascade not null,
   lat float not null,
   lng float not null,
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  unique(trip_id, participant_id)
 );
 
 create table bills (
