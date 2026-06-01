@@ -14,6 +14,7 @@ export default function TripPage() {
   const [tab, setTab] = useState('list');
   const [searchResults, setSearchResults] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [mapReady, setMapReady] = useState(false);
   const [sharingLocation, setSharingLocation] = useState(false);
 
   useEffect(() => { loadTrip(id); }, [id, loadTrip]);
@@ -68,7 +69,7 @@ export default function TripPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <SpotSearch onResults={setSearchResults} city={currentTrip?.destination} mapRef={mapRef} />
+      <SpotSearch onResults={setSearchResults} city={currentTrip?.destination} mapRef={mapRef} mapReady={mapReady} />
       <div className="px-3 py-1.5 bg-blue-50 border-b flex justify-center">
         <button onClick={shareLocation} disabled={sharingLocation}
           className="text-xs bg-blue-500 text-white rounded-full px-4 py-1 disabled:opacity-50">
@@ -76,7 +77,7 @@ export default function TripPage() {
         </button>
       </div>
       <div className="flex-[0.55]">
-        <MapView spots={spots} participants={participants} locations={locations} onMapReady={(api) => { mapRef.current = api; }} />
+        <MapView spots={spots} participants={participants} locations={locations} onMapReady={(api) => { mapRef.current = api; setMapReady(true); }} />
       </div>
       <div className="flex-[0.45] flex flex-col">
         <div className="flex border-b">
