@@ -1,8 +1,8 @@
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/cloudbase';
 
 export function useSpots() {
   const addSpot = async (tripId, spot, dayNumber) => {
-    const { data, error } = await supabase.from('spots').insert({
+    const { id, error } = await db.collection('spots').add({
       trip_id: tripId,
       day_number: dayNumber,
       name: spot.name,
@@ -10,19 +10,20 @@ export function useSpots() {
       lat: spot.location.lat,
       lng: spot.location.lng,
       poi_id: spot.id || null,
-    }).select().single();
+      created_at: new Date().toISOString(),
+    });
 
-    if (error) throw error;
-    return data;
+    if (error) throw new Error(error);
+    return { id, ...spot };
   };
 
   const removeSpot = async (spotId) => {
-    const { error } = await supabase.from('spots').delete().eq('id', spotId);
-    if (error) throw error;
+    const { error } = await db.collection('spots').doc(spotId).remove();
+    if (error) throw new Error(error);
   };
 
   const loadSpots = async (tripId) => {
-    const { data } = await supabase.from('spots').select('*').eq('trip_id', tripId).order('day_number');
+    const { data } = await db.collection('spots').where({ trip_id: tripId }).orderBy('day_number', 'asc').get();
     return data || [];
   };
 

@@ -46,7 +46,7 @@ export default function MapView({ spots, participants, locations, onMapReady }) 
     participantMarkersRef.current = [];
 
     participants.forEach((p) => {
-      const loc = locations.find((l) => l.participant_id === p.id);
+      const loc = locations.find((l) => l.participant_id === p._id);
       if (loc) {
         const marker = addParticipantMarker(loc.lng, loc.lat, p.nickname, p.color);
         if (marker) participantMarkersRef.current.push(marker);

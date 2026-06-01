@@ -6,7 +6,7 @@ export default function TripCard({ trip, onDelete }) {
   return (
     <div
       className="bg-white rounded-xl shadow-sm border p-4 mb-3 active:bg-gray-50"
-      onClick={() => navigate(`/trip/${trip.id}`)}
+      onClick={() => navigate(`/trip/${trip._id}`)}
     >
       <div className="flex justify-between items-start">
         <div>
@@ -17,7 +17,7 @@ export default function TripCard({ trip, onDelete }) {
           </p>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); onDelete(trip.id); }}
+          onClick={(e) => { e.stopPropagation(); onDelete(trip._id); }}
           className="text-gray-300 text-xs active:text-red-400"
         >
           删除

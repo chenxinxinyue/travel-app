@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { db, auth } from '../lib/cloudbase';
 
 const TripContext = createContext(null);
 
@@ -17,6 +17,17 @@ function storeIdentity(tripId, participantId, nickname) {
   localStorage.setItem('travel_identity', JSON.stringify(identity));
 }
 
+let authReady = false;
+
+async function ensureAuth() {
+  if (authReady) return;
+  const loginState = await auth.getLoginState();
+  if (!loginState) {
+    await auth.anonymousAuthProvider().signIn();
+  }
+  authReady = true;
+}
+
 export function TripProvider({ children }) {
   const [trips, setTrips] = useState([]);
   const [currentTrip, setCurrentTrip] = useState(null);
@@ -25,86 +36,97 @@ export function TripProvider({ children }) {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 加载所有行程
   const loadTrips = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('trips').select('*').order('created_at', { ascending: false });
+    await ensureAuth();
+    const { data } = await db.collection('trips').orderBy('created_at', 'desc').get();
     if (data) setTrips(data);
     setLoading(false);
   }, []);
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
 
-  // 加载单次行程的全部数据
   const loadTrip = useCallback(async (tripId) => {
     setLoading(true);
+    await ensureAuth();
     const [tripRes, partRes, spotRes, billRes] = await Promise.all([
-      supabase.from('trips').select('*').eq('id', tripId).single(),
-      supabase.from('participants').select('*').eq('trip_id', tripId),
-      supabase.from('spots').select('*').eq('trip_id', tripId).order('day_number'),
-      supabase.from('bills').select('*, participants(nickname)').eq('trip_id', tripId).order('created_at', { ascending: false }),
+      db.collection('trips').doc(tripId).get(),
+      db.collection('participants').where({ trip_id: tripId }).get(),
+      db.collection('spots').where({ trip_id: tripId }).orderBy('day_number', 'asc').get(),
+      db.collection('bills').where({ trip_id: tripId }).orderBy('created_at', 'desc').get(),
     ]);
-    if (tripRes.data) setCurrentTrip(tripRes.data);
+    if (tripRes.data && tripRes.data.length > 0) setCurrentTrip(tripRes.data[0]);
     if (partRes.data) setParticipants(partRes.data);
     if (spotRes.data) setSpots(spotRes.data);
     if (billRes.data) setBills(billRes.data);
     setLoading(false);
   }, []);
 
-  // 创建行程
   const createTrip = async ({ title, destination, startDate, endDate, nickname }) => {
+    await ensureAuth();
     const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const { data: trip } = await supabase.from('trips').insert({
+    const { id: tripId } = await db.collection('trips').add({
       title, destination,
       start_date: startDate, end_date: endDate,
       invite_code: inviteCode,
-    }).select().single();
+      created_at: new Date().toISOString(),
+    });
 
-    if (!trip) throw new Error('创建行程失败');
+    if (!tripId) throw new Error('创建行程失败');
 
     const color = COLORS[0];
-    const { data: participant } = await supabase.from('participants').insert({
-      trip_id: trip.id, nickname, color,
-    }).select().single();
+    const { id: participantId } = await db.collection('participants').add({
+      trip_id: tripId, nickname, color,
+    });
 
-    if (participant) {
-      storeIdentity(trip.id, participant.id, nickname);
+    if (participantId) {
+      storeIdentity(tripId, participantId, nickname);
     }
 
     await loadTrips();
-    return trip;
+    return { id: tripId, title, destination, start_date: startDate, end_date: endDate, invite_code: inviteCode };
   };
 
-  // 加入行程
   const joinTrip = async (inviteCode, nickname) => {
-    const { data: trip } = await supabase.from('trips').select('*').eq('invite_code', inviteCode.toUpperCase()).single();
-    if (!trip) throw new Error('邀请码无效');
+    await ensureAuth();
+    const { data } = await db.collection('trips').where({ invite_code: inviteCode.toUpperCase() }).get();
+    if (!data || data.length === 0) throw new Error('邀请码无效');
+    const trip = data[0];
 
     const identity = getStoredIdentity();
-    if (identity && identity[trip.id]) throw new Error('你已经在这个行程中了');
+    if (identity && identity[trip._id]) throw new Error('你已经在这个行程中了');
 
-    const color = COLORS[(trip.id.length + nickname.length) % COLORS.length];
-    const { data: participant } = await supabase.from('participants').insert({
-      trip_id: trip.id, nickname, color,
-    }).select().single();
+    const color = COLORS[(trip._id.length + nickname.length) % COLORS.length];
+    const { id: participantId } = await db.collection('participants').add({
+      trip_id: trip._id, nickname, color,
+    });
 
-    if (participant) {
-      storeIdentity(trip.id, participant.id, nickname);
+    if (participantId) {
+      storeIdentity(trip._id, participantId, nickname);
     }
 
     await loadTrips();
     return trip;
   };
 
-  // 获取当前用户在该行程中的 participant 信息
   const getMyParticipant = (tripId) => {
     const identity = getStoredIdentity();
     return identity?.[tripId] || null;
   };
 
-  // 删除行程
   const deleteTrip = async (tripId) => {
-    await supabase.from('trips').delete().eq('id', tripId);
+    await ensureAuth();
+    // Delete related data
+    const collections = ['participants', 'spots', 'locations', 'bills'];
+    for (const col of collections) {
+      const { data } = await db.collection(col).where({ trip_id: tripId }).get();
+      if (data) {
+        for (const doc of data) {
+          await db.collection(col).doc(doc._id).remove();
+        }
+      }
+    }
+    await db.collection('trips').doc(tripId).remove();
     await loadTrips();
   };
 

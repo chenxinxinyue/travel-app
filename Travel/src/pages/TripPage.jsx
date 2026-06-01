@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTrip } from '../contexts/TripContext';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/cloudbase';
 import MapView from '../components/MapView';
 import SpotSearch from '../components/SpotSearch';
 import SpotList from '../components/SpotList';
@@ -22,7 +22,7 @@ export default function TripPage() {
   useEffect(() => {
     if (!id || !participants.length) return;
     const loadLocations = async () => {
-      const { data } = await supabase.from('locations').select('*').eq('trip_id', id);
+      const { data } = await db.collection('locations').where({ trip_id: id }).get();
       if (data) setLocations(data);
     };
     loadLocations();
@@ -43,13 +43,20 @@ export default function TripPage() {
           if (status === 'complete') {
             const myInfo = getMyParticipant(id);
             if (myInfo) {
-              await supabase.from('locations').upsert({
+              const { data: existing } = await db.collection('locations')
+                .where({ trip_id: id, participant_id: myInfo.participantId }).get();
+              const locData = {
                 trip_id: id,
                 participant_id: myInfo.participantId,
                 lat: result.position.lat,
                 lng: result.position.lng,
                 updated_at: new Date().toISOString(),
-              }, { onConflict: 'trip_id,participant_id' });
+              };
+              if (existing && existing.length > 0) {
+                await db.collection('locations').doc(existing[0]._id).update(locData);
+              } else {
+                await db.collection('locations').add(locData);
+              }
               await loadTrip(id);
             }
           }

@@ -1,0 +1,16 @@
+{
+  "envId": "travel-with-you-d6f64m3i1642f307",
+  "framework": {
+    "name": "vite",
+    "plugins": {
+      "client": {
+        "path": "./dist",
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "outputPath": "./dist",
+          "cloudPath": "/"
+        }
+      }
+    }
+  }
+}

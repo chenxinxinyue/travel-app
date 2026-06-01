@@ -23,7 +23,7 @@ export default function HomePage() {
           </div>
         )}
         {trips.map((trip) => (
-          <TripCard key={trip.id} trip={trip} onDelete={deleteTrip} />
+          <TripCard key={trip._id} trip={trip} onDelete={deleteTrip} />
         ))}
       </div>
 

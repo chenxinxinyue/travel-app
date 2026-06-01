@@ -36,7 +36,7 @@ export default function BillsPage() {
         ) : (
           <div className="bg-white mt-2 divide-y">
             {bills.map((bill) => (
-              <BillItem key={bill.id} bill={bill} onDelete={handleDelete} />
+              <BillItem key={bill._id} bill={bill} onDelete={handleDelete} />
             ))}
           </div>
         )}

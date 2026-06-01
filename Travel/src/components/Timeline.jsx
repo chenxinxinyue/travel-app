@@ -30,13 +30,13 @@ export default function Timeline({ spots, tripId, currentTrip }) {
             <p className="text-xs text-gray-300 pl-2">暂无安排</p>
           )}
           {grouped[day]?.map((spot) => (
-            <div key={spot.id} className="flex items-center gap-2 pl-2 py-1.5">
+            <div key={spot._id} className="flex items-center gap-2 pl-2 py-1.5">
               <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">{spot.name}</p>
                 {spot.address && <p className="text-xs text-gray-400 truncate">{spot.address}</p>}
               </div>
-              <button onClick={() => handleRemove(spot.id)}
+              <button onClick={() => handleRemove(spot._id)}
                 className="text-xs text-gray-300 active:text-red-400 shrink-0">移除</button>
             </div>
           ))}

@@ -5,7 +5,7 @@ import { useBills } from '../hooks/useBills';
 export default function AddBillModal({ open, onClose }) {
   const { currentTrip, participants, loadTrip, getMyParticipant } = useTrip();
   const { addBill } = useBills();
-  const tripId = currentTrip?.id;
+  const tripId = currentTrip?._id;
   const myInfo = getMyParticipant(tripId);
 
   const [item, setItem] = useState('');
@@ -22,8 +22,9 @@ export default function AddBillModal({ open, onClose }) {
     setSubmitting(true);
     setError('');
     try {
-      await addBill(currentTrip.id, payerId, item, amount);
-      await loadTrip(currentTrip.id);
+      const payer = participants.find((p) => p._id === payerId);
+      await addBill(currentTrip._id, payerId, item, amount, payer?.nickname || '未知');
+      await loadTrip(currentTrip._id);
       setItem(''); setAmount(''); onClose();
     } catch (err) {
       setError(err.message);
@@ -44,7 +45,7 @@ export default function AddBillModal({ open, onClose }) {
         <select className="w-full border rounded-lg px-3 py-2 text-sm" value={payerId} onChange={(e) => setPayerId(e.target.value)}>
           <option value="">谁付的</option>
           {participants.map((p) => (
-            <option key={p.id} value={p.id}>{p.nickname}</option>
+            <option key={p._id} value={p._id}>{p.nickname}</option>
           ))}
         </select>
         <button type="submit" disabled={submitting}

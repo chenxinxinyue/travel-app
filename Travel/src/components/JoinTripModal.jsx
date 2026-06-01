@@ -20,7 +20,7 @@ export default function JoinTripModal({ open, onClose }) {
     try {
       const trip = await joinTrip(inviteCode, nickname);
       onClose();
-      navigate(`/trip/${trip.id}`);
+      navigate(`/trip/${trip._id}`);
     } catch (err) {
       setError(err.message);
     } finally {
