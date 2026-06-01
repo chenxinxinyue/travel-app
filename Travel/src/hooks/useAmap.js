@@ -123,5 +123,22 @@ export default function useAmap(containerRef) {
     });
   }, [AMap]);
 
-  return { map, AMap, ready, locateMe, addMarker, clearMarkers, fitView, searchPOI, currentMarkerRef, markersRef };
+  // Add a participant location marker
+  const addParticipantMarker = useCallback((lng, lat, nickname, color) => {
+    if (!AMap || !map) return null;
+    const marker = new AMap.Marker({
+      position: [lng, lat],
+      icon: new AMap.Icon({
+        size: new AMap.Size(20, 20),
+        image: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8' fill='${encodeURIComponent(color)}' stroke='white' stroke-width='2'/%3E%3C/svg%3E`,
+        imageSize: new AMap.Size(20, 20),
+      }),
+      title: nickname,
+      zIndex: 90,
+    });
+    map.add(marker);
+    return marker;
+  }, [AMap, map]);
+
+  return { map, AMap, ready, locateMe, addMarker, clearMarkers, fitView, searchPOI, currentMarkerRef, markersRef, addParticipantMarker };
 }
