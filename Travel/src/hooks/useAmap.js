@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY;
 const AMAP_SECRET = import.meta.env.VITE_AMAP_SECRET;
+const AMAP_WS_KEY = import.meta.env.VITE_AMAP_WS_KEY;
 
 // Dynamically load AMap JS API
 function loadAmapScript(key, secret) {
@@ -105,56 +106,45 @@ export default function useAmap(containerRef) {
     map.setFitView(positions.map((p) => new AMap.LngLat(p.lng, p.lat)));
   }, [map, AMap]);
 
-  // POI search — try PlaceSearch first, fall back to AutoComplete
+  // POI search using Web Service API via JSONP
   const searchPOI = useCallback(async (keyword, city) => {
-    if (!AMap) return [];
+    if (!AMAP_WS_KEY) return [];
 
-    // Try PlaceSearch
-    const placeResults = await new Promise((resolve) => {
-      AMap.plugin('AMap.PlaceSearch', () => {
-        try {
-          const search = new AMap.PlaceSearch({
-            city: city || undefined,
-            pageSize: 20,
-            extensions: 'all',
-          });
-          search.search(keyword, (status, result) => {
-            if (status === 'complete') {
-              const pois = result?.poiList?.pois || result?.pois || [];
-              resolve(pois);
-            } else {
-              resolve(null); // null means PlaceSearch failed, try fallback
-            }
-          });
-        } catch { resolve(null); }
+    return new Promise((resolve) => {
+      const callbackName = '_amap_cb_' + Date.now();
+      const params = new URLSearchParams({
+        key: AMAP_WS_KEY,
+        keywords: keyword,
+        city: city || '',
+        extensions: 'all',
+        offset: '20',
+        callback: callbackName,
       });
+
+      window[callbackName] = (data) => {
+        delete window[callbackName];
+        document.head.removeChild(script);
+        if (data.status === '1' && data.pois) {
+          resolve(data.pois.map((poi) => {
+            const [lng, lat] = (poi.location || '0,0').split(',').map(Number);
+            return {
+              id: poi.id,
+              name: poi.name,
+              address: poi.address || '',
+              location: { lng, lat },
+            };
+          }));
+        } else {
+          resolve([]);
+        }
+      };
+
+      const script = document.createElement('script');
+      script.src = `https://restapi.amap.com/v3/place/text?${params}`;
+      script.onerror = () => { resolve([]); };
+      document.head.appendChild(script);
     });
-
-    if (placeResults && placeResults.length > 0) return placeResults;
-
-    // Fallback: use AutoComplete
-    const autoResults = await new Promise((resolve) => {
-      AMap.plugin('AMap.AutoComplete', () => {
-        try {
-          const auto = new AMap.AutoComplete({
-            city: city || undefined,
-          });
-          auto.search(keyword, (status, result) => {
-            if (status === 'complete' && result.tips) {
-              resolve(result.tips.filter((t) => t.location).map((t) => ({
-                id: t.id, name: t.name, address: t.address || t.district || '',
-                location: t.location,
-              })));
-            } else {
-              resolve([]);
-            }
-          });
-        } catch { resolve([]); }
-      });
-    });
-
-    return autoResults;
-  }, [AMap]);
+  }, []);
 
   // Add a participant location marker
   const addParticipantMarker = useCallback((lng, lat, nickname, color) => {
