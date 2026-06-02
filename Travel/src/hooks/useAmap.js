@@ -76,7 +76,7 @@ export default function useAmap(containerRef) {
       map.addControl(geolocation);
       geolocation.getCurrentPosition((status, result) => {
         if (status === 'complete') {
-          map.setCenter([result.position.lng, result.position.lat]);
+          map.setZoomAndCenter(16, [result.position.lng, result.position.lat]);
           if (currentMarkerRef.current) {
             map.remove(currentMarkerRef.current);
           }
