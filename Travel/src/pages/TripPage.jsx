@@ -16,11 +16,12 @@ export default function TripPage() {
   const [locations, setLocations] = useState([]);
   const [mapReady, setMapReady] = useState(false);
   const [sharingLocation, setSharingLocation] = useState(false);
-  const [panelState, setPanelState] = useState('peek'); // open | peek | hidden
+  const [panelState, setPanelState] = useState('peek');
+  const pendingSpotRef = useRef(null);
 
   useEffect(() => { loadTrip(id); }, [id, loadTrip]);
 
-  // Auto-locate to destination when trip loads
+  // Auto-locate
   useEffect(() => {
     if (mapReady && currentTrip?.destination) {
       mapRef.current?.locateCity(currentTrip.destination);
@@ -39,6 +40,17 @@ export default function TripPage() {
     return () => clearInterval(interval);
   }, [id, participants.length]);
 
+  // Set up "想去" global callback
+  useEffect(() => {
+    window.__travelWantToGo = () => {
+      if (window.__travelPendingSpot) {
+        pendingSpotRef.current = window.__travelPendingSpot;
+        setSearchResults(prev => [...prev]);
+      }
+    };
+    return () => { delete window.__travelWantToGo; };
+  }, []);
+
   const shareLocation = async () => {
     if (!mapRef.current) return;
     setSharingLocation(true);
@@ -54,27 +66,17 @@ export default function TripPage() {
             if (myInfo) {
               const { data: existing } = await db.collection('locations')
                 .where({ trip_id: id, participant_id: myInfo.participantId }).get();
-              const locData = {
-                trip_id: id,
-                participant_id: myInfo.participantId,
-                lat: result.position.lat,
-                lng: result.position.lng,
-                updated_at: new Date().toISOString(),
-              };
+              const locData = { trip_id: id, participant_id: myInfo.participantId, lat: result.position.lat, lng: result.position.lng, updated_at: new Date().toISOString() };
               if (existing && existing.length > 0) {
                 await db.collection('locations').doc(existing[0]._id).update(locData);
               } else {
                 await db.collection('locations').add(locData);
               }
               await loadTrip(id);
-              // Fetch all positions fresh, then fit view
-              const [spotRes, locRes] = await Promise.all([
-                db.collection('spots').where({ trip_id: id }).get(),
-                db.collection('locations').where({ trip_id: id }).get(),
-              ]);
-              const allPos = [];
-              if (spotRes.data) spotRes.data.forEach(s => allPos.push({ lng: s.lng, lat: s.lat }));
-              if (locRes.data) locRes.data.forEach(l => allPos.push({ lng: l.lng, lat: l.lat }));
+              // Fit to show all spots + locations
+              const { data: locData } = await db.collection('locations').where({ trip_id: id }).get();
+              const allPos = spots.map(s => ({ lng: s.lng, lat: s.lat }));
+              if (locData) locData.forEach(l => allPos.push({ lng: l.lng, lat: l.lat }));
               if (allPos.length > 0) mapRef.current.fitView(allPos);
             }
           }
@@ -88,7 +90,12 @@ export default function TripPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <SpotSearch onResults={setSearchResults} city={currentTrip?.destination} mapRef={mapRef} mapReady={mapReady} />
+      <SpotSearch onResults={(results) => {
+        setSearchResults(results);
+        if (results.length > 0 && mapRef.current) {
+          mapRef.current.showSearchMarkers(results);
+        }
+      }} city={currentTrip?.destination} mapRef={mapRef} mapReady={mapReady} />
       <div className="px-3 py-1.5 bg-blue-50 border-b flex items-center justify-between">
         <button onClick={shareLocation} disabled={sharingLocation}
           className="text-xs bg-blue-500 text-white rounded-full px-3 py-0.5 disabled:opacity-50">
@@ -108,18 +115,18 @@ export default function TripPage() {
           onMapReady={(api) => { mapRef.current = api; setMapReady(true); }}
           onMapClick={async (pos) => {
             if (!mapRef.current) return;
+            const results = await mapRef.current.searchAround(pos.lng, pos.lat);
+            setSearchResults(results);
             setTab('list');
             setPanelState('open');
-            const results = await mapRef.current.searchAround(pos.lng, pos.lat);
-            if (results.length > 0) setSearchResults(results);
+            if (results.length > 0) mapRef.current.showSearchMarkers(results);
           }}
         />
       </div>
 
-      {/* Collapsible bottom panel */}
+      {/* Bottom panel */}
       {panelState !== 'hidden' && (
         <div className="flex flex-col border-t bg-white" style={{ maxHeight: panelState === 'peek' ? '42px' : '45%' }}>
-          {/* Tab bar */}
           <div className="flex items-stretch shrink-0" style={{ height: '44px' }}>
             <button onClick={() => setPanelState(panelState === 'open' ? 'peek' : 'open')}
               className="text-gray-400 text-xs px-3 flex items-center shrink-0 border-r">
@@ -129,30 +136,21 @@ export default function TripPage() {
               if (panelState === 'peek') { setPanelState('open'); setTab('list'); }
               else if (tab === 'list') setPanelState('peek');
               else setTab('list');
-            }}
-              className={`flex-1 flex items-center justify-center text-sm ${tab === 'list' ? 'text-blue-500 font-semibold border-b-2 border-blue-500' : 'text-gray-400'}`}>
-              景点列表
-            </button>
+            }} className={`flex-1 flex items-center justify-center text-sm ${tab === 'list' ? 'text-blue-500 font-semibold border-b-2 border-blue-500' : 'text-gray-400'}`}>景点列表</button>
             <button onClick={() => {
               if (panelState === 'peek') { setPanelState('open'); setTab('timeline'); }
               else if (tab === 'timeline') setPanelState('peek');
               else setTab('timeline');
-            }}
-              className={`flex-1 flex items-center justify-center text-sm ${tab === 'timeline' ? 'text-blue-500 font-semibold border-b-2 border-blue-500' : 'text-gray-400'}`}>
-              时间线
-            </button>
+            }} className={`flex-1 flex items-center justify-center text-sm ${tab === 'timeline' ? 'text-blue-500 font-semibold border-b-2 border-blue-500' : 'text-gray-400'}`}>时间线</button>
           </div>
           {panelState === 'open' && (
             <div className="flex-1 min-h-0 overflow-y-auto">
               {tab === 'list'
                 ? <SpotList results={searchResults} tripId={id} spots={spots} currentTrip={currentTrip} onAdd={() => setTab('timeline')} myInfo={myInfo}
+                    pendingSpot={pendingSpotRef.current}
                     onFocus={(poi) => {
                       if (mapRef.current) {
                         mapRef.current.map.setZoomAndCenter(16, [poi.location.lng, poi.location.lat]);
-                        mapRef.current.clearMarkers();
-                        const marker = new mapRef.current.AMap.Marker({ position: [poi.location.lng, poi.location.lat], title: poi.name });
-                        mapRef.current.map.add(marker);
-                        mapRef.current.markersRef.current.push(marker);
                       }
                     }} />
                 : <Timeline spots={spots} tripId={id} currentTrip={currentTrip} myParticipantId={myInfo?.participantId}
@@ -160,33 +158,15 @@ export default function TripPage() {
                       if (!mapRef.current) return;
                       mapRef.current.map.stopMove();
                       mapRef.current.map.setZoomAndCenter(16, [pos.lng, pos.lat]);
-                      // Show a highlighted marker
-                      mapRef.current.clearMarkers();
-                      const m = new mapRef.current.AMap.Marker({
-                        position: [pos.lng, pos.lat],
-                        icon: new mapRef.current.AMap.Icon({
-                          size: new mapRef.current.AMap.Size(28, 28),
-                          image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
-                          imageSize: new mapRef.current.AMap.Size(28, 28),
-                        }),
-                        zIndex: 110,
-                      });
-                      mapRef.current.map.add(m);
-                      mapRef.current.markersRef.current.push(m);
                     }} />
               }
             </div>
           )}
         </div>
       )}
-
-      {/* Peek bar when hidden */}
       {panelState === 'hidden' && (
-        <div className="flex items-center shrink-0 border-t bg-white px-2" style={{ minHeight: '42px' }}>
-          <button onClick={() => setPanelState('open')}
-            className="text-gray-400 text-xs px-2 py-0.5">
-            ▲ 展开列表
-          </button>
+        <div className="flex items-center shrink-0 border-t bg-white px-2" style={{ height: '44px' }}>
+          <button onClick={() => setPanelState('open')} className="text-gray-400 text-xs px-2">▲ 展开列表</button>
         </div>
       )}
     </div>

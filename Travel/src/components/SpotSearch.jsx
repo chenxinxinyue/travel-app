@@ -5,41 +5,29 @@ export default function SpotSearch({ onResults, city, mapRef, mapReady }) {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const timerRef = useRef(null);
-  const infoWindowRef = useRef(null);
 
   const doSearch = async (kw) => {
-    if (!kw.trim()) return;
+    if (!kw.trim()) { onResults([]); return; }
     if (!mapRef.current) { setError('地图还在加载中...'); return; }
     setError('');
     setSearching(true);
     try {
       const results = await mapRef.current.searchPOI(kw, city || '全国');
       onResults(results);
-
       if (results.length === 0) {
         setError('未找到相关景点');
       } else {
-        const { AMap } = mapRef.current;
-        mapRef.current.clearMarkers();
-        if (infoWindowRef.current) { infoWindowRef.current.close(); infoWindowRef.current = null; }
-        results.forEach((poi) => {
-          const [lng, lat] = [poi.location.lng, poi.location.lat];
-          const content = `<div style="padding:4px 8px;max-width:200px"><b>${poi.name}</b><br><span style="font-size:11px;color:#666">${poi.address || ''}</span></div>`;
-          const marker = new AMap.Marker({ position: [lng, lat], title: poi.name });
-          marker.on('click', () => {
-            mapRef.current.map.stopMove();
-            mapRef.current.map.setZoomAndCenter(16, [lng, lat]);
-            if (infoWindowRef.current) infoWindowRef.current.close();
-            infoWindowRef.current = new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -30) });
-            infoWindowRef.current.open(mapRef.current.map, marker.getPosition());
-          });
-          mapRef.current.map.add(marker);
-          mapRef.current.markersRef.current.push(marker);
-        });
-        mapRef.current.fitView(results.map((p) => ({ lng: p.location.lng, lat: p.location.lat })));
+        mapRef.current.showSearchMarkers(results);
       }
     } catch { setError('搜索失败，请重试'); }
     finally { setSearching(false); }
+  };
+
+  const handleClear = () => {
+    setKeyword('');
+    onResults([]);
+    setError('');
+    if (mapRef.current) mapRef.current.clearSearchMarkers();
   };
 
   const handleChange = (e) => {
@@ -47,14 +35,14 @@ export default function SpotSearch({ onResults, city, mapRef, mapReady }) {
     setKeyword(v);
     setError('');
     clearTimeout(timerRef.current);
-    if (!v.trim()) { onResults([]); return; }
+    if (!v.trim()) { onResults([]); mapRef.current?.clearSearchMarkers(); return; }
     timerRef.current = setTimeout(() => doSearch(v), 400);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       clearTimeout(timerRef.current);
-      if (!keyword.trim()) { onResults([]); return; }
+      if (!keyword.trim()) { handleClear(); return; }
       doSearch(keyword);
     }
   };
@@ -71,8 +59,8 @@ export default function SpotSearch({ onResults, city, mapRef, mapReady }) {
           disabled={!mapReady}
         />
         {keyword && (
-          <button onClick={() => { setKeyword(''); onResults([]); setError(''); }}
-            className="absolute right-14 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-sm px-1">
+          <button onClick={handleClear}
+            className="absolute right-14 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm px-1 z-10">
             ✕
           </button>
         )}

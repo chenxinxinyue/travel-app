@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSpots } from '../hooks/useSpots';
 import { useTrip } from '../contexts/TripContext';
 
-export default function SpotList({ results, tripId, spots, currentTrip, onAdd, myInfo, onFocus }) {
+export default function SpotList({ results, tripId, spots, currentTrip, onAdd, myInfo, onFocus, pendingSpot }) {
   const { addSpot } = useSpots();
   const { loadTrip } = useTrip();
   const [dayPicker, setDayPicker] = useState(null);
@@ -16,6 +16,11 @@ export default function SpotList({ results, tripId, spots, currentTrip, onAdd, m
 
   // Reset day picker when search results change
   useEffect(() => { setDayPicker(null); }, [results]);
+
+  // Handle "想去" from map marker
+  useEffect(() => {
+    if (pendingSpot) setDayPicker(pendingSpot);
+  }, [pendingSpot]);
 
   const handleAdd = async (dayNumber) => {
     if (!dayPicker) return;
