@@ -156,7 +156,24 @@ export default function TripPage() {
                       }
                     }} />
                 : <Timeline spots={spots} tripId={id} currentTrip={currentTrip} myParticipantId={myInfo?.participantId}
-                    onFocus={(pos) => { mapRef.current?.map.setZoomAndCenter(16, [pos.lng, pos.lat]); }} />
+                    onFocus={(pos) => {
+                      if (!mapRef.current) return;
+                      mapRef.current.map.stopMove();
+                      mapRef.current.map.setZoomAndCenter(16, [pos.lng, pos.lat]);
+                      // Show a highlighted marker
+                      mapRef.current.clearMarkers();
+                      const m = new mapRef.current.AMap.Marker({
+                        position: [pos.lng, pos.lat],
+                        icon: new mapRef.current.AMap.Icon({
+                          size: new mapRef.current.AMap.Size(28, 28),
+                          image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
+                          imageSize: new mapRef.current.AMap.Size(28, 28),
+                        }),
+                        zIndex: 110,
+                      });
+                      mapRef.current.map.add(m);
+                      mapRef.current.markersRef.current.push(m);
+                    }} />
               }
             </div>
           )}
