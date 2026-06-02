@@ -67,13 +67,15 @@ export default function TripPage() {
                 await db.collection('locations').add(locData);
               }
               await loadTrip(id);
-              // Fit view to show all spots + locations
-              setTimeout(() => {
-                if (!mapRef.current) return;
-                const allPos = spots.map(s => ({ lng: s.lng, lat: s.lat }));
-                locations.forEach(l => allPos.push({ lng: l.lng, lat: l.lat }));
-                if (allPos.length > 0) mapRef.current.fitView(allPos);
-              }, 500);
+              // Fetch all positions fresh, then fit view
+              const [spotRes, locRes] = await Promise.all([
+                db.collection('spots').where({ trip_id: id }).get(),
+                db.collection('locations').where({ trip_id: id }).get(),
+              ]);
+              const allPos = [];
+              if (spotRes.data) spotRes.data.forEach(s => allPos.push({ lng: s.lng, lat: s.lat }));
+              if (locRes.data) locRes.data.forEach(l => allPos.push({ lng: l.lng, lat: l.lat }));
+              if (allPos.length > 0) mapRef.current.fitView(allPos);
             }
           }
           setSharingLocation(false);
