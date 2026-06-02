@@ -155,7 +155,8 @@ export default function TripPage() {
                         mapRef.current.markersRef.current.push(marker);
                       }
                     }} />
-                : <Timeline spots={spots} tripId={id} currentTrip={currentTrip} myParticipantId={myInfo?.participantId} />
+                : <Timeline spots={spots} tripId={id} currentTrip={currentTrip} myParticipantId={myInfo?.participantId}
+                    onFocus={(pos) => { mapRef.current?.map.setZoomAndCenter(16, [pos.lng, pos.lat]); }} />
               }
             </div>
           )}

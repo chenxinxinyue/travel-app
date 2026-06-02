@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSpots } from '../hooks/useSpots';
 import { useTrip } from '../contexts/TripContext';
 
-export default function Timeline({ spots, tripId, currentTrip, myParticipantId }) {
+export default function Timeline({ spots, tripId, currentTrip, myParticipantId, onFocus }) {
   const { removeSpot } = useSpots();
   const { loadTrip } = useTrip();
   const [confirming, setConfirming] = useState(null);
@@ -39,7 +39,8 @@ export default function Timeline({ spots, tripId, currentTrip, myParticipantId }
           {grouped[day]?.map((spot) => {
             const isMine = myParticipantId && spot.added_by_id === myParticipantId;
             return (
-            <div key={spot._id} className="flex items-center gap-2 pl-2 py-1.5 group">
+            <div key={spot._id} className="flex items-center gap-2 pl-2 py-1.5 group active:bg-gray-50"
+              onClick={() => onFocus?.({ lng: spot.lng, lat: spot.lat })}>
               <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">{spot.name}</p>

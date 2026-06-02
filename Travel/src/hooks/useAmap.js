@@ -126,6 +126,7 @@ export default function useAmap(containerRef) {
         ne.lng = Math.max(ne.lng, p.lng);
         ne.lat = Math.max(ne.lat, p.lat);
       });
+      map.stopMove();
       map.setBounds(new AMap.Bounds(sw, ne), false, [60, 60, 60, 60]);
     } catch {}
   }, [map, AMap]);
