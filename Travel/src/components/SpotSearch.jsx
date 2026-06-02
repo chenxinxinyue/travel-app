@@ -27,7 +27,7 @@ export default function SpotSearch({ onResults, city, mapRef, mapReady }) {
           const content = `<div style="padding:4px 8px;max-width:200px"><b>${poi.name}</b><br><span style="font-size:11px;color:#666">${poi.address || ''}</span></div>`;
           const marker = new AMap.Marker({ position: [lng, lat], title: poi.name });
           marker.on('click', () => {
-            mapRef.current.map.setZoomAndCenter(15, [lng, lat]);
+            mapRef.current.map.setZoomAndCenter(16, [lng, lat]);
             if (infoWindowRef.current) infoWindowRef.current.close();
             infoWindowRef.current = new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -30) });
             infoWindowRef.current.open(mapRef.current.map, marker.getPosition());

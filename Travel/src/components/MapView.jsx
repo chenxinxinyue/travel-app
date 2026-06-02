@@ -42,7 +42,7 @@ const MapView = memo(function MapView({ spots, participants, locations, onMapRea
       if (marker) {
         const content = `<div style="padding:6px 10px;max-width:220px"><b>${spot.name}</b><div style="font-size:11px;color:#666;margin:2px 0">${spot.address||''}${spot.added_by ? ' · '+spot.added_by+'添加' : ''}</div></div>`;
         marker.on('click', () => {
-          map.setZoomAndCenter(15, [spot.lng, spot.lat]);
+          map.setZoomAndCenter(16, [spot.lng, spot.lat]);
           if (infoWindowRef.current) infoWindowRef.current.close();
           infoWindowRef.current = new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -30) });
           infoWindowRef.current.open(map, marker.getPosition());

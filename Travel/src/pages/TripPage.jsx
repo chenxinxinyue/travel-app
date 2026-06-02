@@ -148,7 +148,7 @@ export default function TripPage() {
                 ? <SpotList results={searchResults} tripId={id} spots={spots} currentTrip={currentTrip} onAdd={() => setTab('timeline')} myInfo={myInfo}
                     onFocus={(poi) => {
                       if (mapRef.current) {
-                        mapRef.current.map.setZoomAndCenter(15, [poi.location.lng, poi.location.lat]);
+                        mapRef.current.map.setZoomAndCenter(16, [poi.location.lng, poi.location.lat]);
                         mapRef.current.clearMarkers();
                         const marker = new mapRef.current.AMap.Marker({ position: [poi.location.lng, poi.location.lat], title: poi.name });
                         mapRef.current.map.add(marker);
