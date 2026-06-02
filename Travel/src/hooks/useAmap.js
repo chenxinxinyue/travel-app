@@ -25,7 +25,6 @@ export default function useAmap(containerRef) {
   const searchMarkersRef = useRef([]);
   const friendMarkersRef = useRef([]);
   const infoWindowRef = useRef(null);
-  const onWantToGoRef = useRef(null);
 
   // Initialize map
   useEffect(() => {
@@ -94,9 +93,7 @@ export default function useAmap(containerRef) {
     const positions = [];
     pois.forEach((poi) => {
       const [lng, lat] = [poi.location.lng, poi.location.lat];
-      const marker = new AMap.Marker({ position: [lng, lat], title: poi.name });
-      // Set pending spot for "想去" click
-      window.__travelPendingSpot = poi;
+      const marker = new AMap.Marker({ position: [lng, lat], title: poi.name, zIndex: 80 });
       marker.on('click', () => {
         window.__travelPendingSpot = poi;
         map.stopMove();
@@ -133,6 +130,7 @@ export default function useAmap(containerRef) {
       const marker = new AMap.Marker({
         position: [spot.lng, spot.lat],
         title: spot.name,
+        zIndex: 70,
         label: { content: spot.name, direction: 'top', offset: new AMap.Pixel(0, -10) },
       });
       marker.on('click', () => {
@@ -230,7 +228,5 @@ export default function useAmap(containerRef) {
     map, AMap, ready, locateMe, locateCity,
     showSearchMarkers, clearSearchMarkers, showSpotMarkers, showFriendMarkers,
     fitView, searchPOI, searchAround,
-    myMarkerRef, searchMarkersRef, spotMarkersRef, friendMarkersRef, infoWindowRef,
-    onWantToGoRef,
   };
 }

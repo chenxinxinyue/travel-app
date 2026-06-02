@@ -3,7 +3,7 @@ import useAmap from '../hooks/useAmap';
 
 const MapView = memo(function MapView({ spots, participants, locations, onMapReady, onMapClick }) {
   const containerRef = useRef(null);
-  const { map, AMap, ready, locateMe, locateCity, showSpotMarkers, showFriendMarkers, onWantToGoRef } = useAmap(containerRef);
+  const { map, AMap, ready, locateMe, locateCity, showSpotMarkers, showFriendMarkers } = useAmap(containerRef);
   const firstLocateRef = useRef(false);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ const MapView = memo(function MapView({ spots, participants, locations, onMapRea
   }, [ready, locateMe]);
 
   useEffect(() => {
-    if (ready && map) onMapReady?.({ map, AMap, locateMe, locateCity, onWantToGoRef });
+    if (ready && map) onMapReady?.({ map, AMap, locateMe, locateCity });
   }, [ready, map, AMap]);
 
   // Show timeline spot markers

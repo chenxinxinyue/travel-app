@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTrip } from '../contexts/TripContext';
 import { db } from '../lib/cloudbase';
@@ -17,18 +17,15 @@ export default function TripPage() {
   const [mapReady, setMapReady] = useState(false);
   const [sharingLocation, setSharingLocation] = useState(false);
   const [panelState, setPanelState] = useState('peek');
-  const pendingSpotRef = useRef(null);
 
   useEffect(() => { loadTrip(id); }, [id, loadTrip]);
 
-  // Auto-locate
   useEffect(() => {
     if (mapReady && currentTrip?.destination) {
       mapRef.current?.locateCity(currentTrip.destination);
     }
   }, [mapReady, currentTrip?.destination]);
 
-  // Load friend locations periodically
   useEffect(() => {
     if (!id || !participants.length) return;
     const loadLocations = async () => {
@@ -40,12 +37,11 @@ export default function TripPage() {
     return () => clearInterval(interval);
   }, [id, participants.length]);
 
-  // Set up "想去" global callback
+  // "想去" global callback from map markers
   useEffect(() => {
     window.__travelWantToGo = () => {
       if (window.__travelPendingSpot) {
-        pendingSpotRef.current = window.__travelPendingSpot;
-        setSearchResults(prev => [...prev]);
+        setSearchResults(prev => [...prev]); // trigger SpotList re-render with pendingSpot
       }
     };
     return () => { delete window.__travelWantToGo; };
@@ -64,19 +60,22 @@ export default function TripPage() {
           if (status === 'complete') {
             const myInfo = getMyParticipant(id);
             if (myInfo) {
-              const { data: existing } = await db.collection('locations')
-                .where({ trip_id: id, participant_id: myInfo.participantId }).get();
               const locData = { trip_id: id, participant_id: myInfo.participantId, lat: result.position.lat, lng: result.position.lng, updated_at: new Date().toISOString() };
+              const { data: existing } = await db.collection('locations').where({ trip_id: id, participant_id: myInfo.participantId }).get();
               if (existing && existing.length > 0) {
                 await db.collection('locations').doc(existing[0]._id).update(locData);
               } else {
                 await db.collection('locations').add(locData);
               }
               await loadTrip(id);
-              // Fit to show all spots + locations
-              const { data: locData } = await db.collection('locations').where({ trip_id: id }).get();
-              const allPos = spots.map(s => ({ lng: s.lng, lat: s.lat }));
-              if (locData) locData.forEach(l => allPos.push({ lng: l.lng, lat: l.lat }));
+              // Fetch fresh data for fitView (not stale closure)
+              const [spotRes, locRes] = await Promise.all([
+                db.collection('spots').where({ trip_id: id }).get(),
+                db.collection('locations').where({ trip_id: id }).get(),
+              ]);
+              const allPos = [];
+              if (spotRes.data) spotRes.data.forEach(s => allPos.push({ lng: s.lng, lat: s.lat }));
+              if (locRes.data) locRes.data.forEach(l => allPos.push({ lng: l.lng, lat: l.lat }));
               if (allPos.length > 0) mapRef.current.fitView(allPos);
             }
           }
@@ -86,16 +85,28 @@ export default function TripPage() {
     } catch { clearTimeout(timeout); setSharingLocation(false); }
   };
 
+  const onMapReady = useCallback((api) => { mapRef.current = api; setMapReady(true); }, []);
+  const onMapClick = useCallback(async (pos) => {
+    if (!mapRef.current) return;
+    mapRef.current.clearSearchMarkers();
+    const results = await mapRef.current.searchAround(pos.lng, pos.lat);
+    setSearchResults(results);
+    setTab('list');
+    setPanelState('open');
+    if (results.length > 0) {
+      mapRef.current.showSearchMarkers(results);
+    }
+  }, []);
+
+  const onResults = useCallback((results) => {
+    setSearchResults(results);
+  }, []);
+
   const myInfo = getMyParticipant(id);
 
   return (
     <div className="h-full flex flex-col">
-      <SpotSearch onResults={(results) => {
-        setSearchResults(results);
-        if (results.length > 0 && mapRef.current) {
-          mapRef.current.showSearchMarkers(results);
-        }
-      }} city={currentTrip?.destination} mapRef={mapRef} mapReady={mapReady} />
+      <SpotSearch onResults={onResults} city={currentTrip?.destination} mapRef={mapRef} mapReady={mapReady} />
       <div className="px-3 py-1.5 bg-blue-50 border-b flex items-center justify-between">
         <button onClick={shareLocation} disabled={sharingLocation}
           className="text-xs bg-blue-500 text-white rounded-full px-3 py-0.5 disabled:opacity-50">
@@ -112,19 +123,9 @@ export default function TripPage() {
       </div>
       <div className="flex-1 min-h-0">
         <MapView spots={spots} participants={participants} locations={locations}
-          onMapReady={(api) => { mapRef.current = api; setMapReady(true); }}
-          onMapClick={async (pos) => {
-            if (!mapRef.current) return;
-            const results = await mapRef.current.searchAround(pos.lng, pos.lat);
-            setSearchResults(results);
-            setTab('list');
-            setPanelState('open');
-            if (results.length > 0) mapRef.current.showSearchMarkers(results);
-          }}
-        />
+          onMapReady={onMapReady} onMapClick={onMapClick} />
       </div>
 
-      {/* Bottom panel */}
       {panelState !== 'hidden' && (
         <div className="flex flex-col border-t bg-white" style={{ maxHeight: panelState === 'peek' ? '42px' : '45%' }}>
           <div className="flex items-stretch shrink-0" style={{ height: '44px' }}>
@@ -134,30 +135,25 @@ export default function TripPage() {
             </button>
             <button onClick={() => {
               if (panelState === 'peek') { setPanelState('open'); setTab('list'); }
-              else if (tab === 'list') setPanelState('peek');
-              else setTab('list');
+              else if (tab !== 'list') setTab('list');
             }} className={`flex-1 flex items-center justify-center text-sm ${tab === 'list' ? 'text-blue-500 font-semibold border-b-2 border-blue-500' : 'text-gray-400'}`}>景点列表</button>
             <button onClick={() => {
               if (panelState === 'peek') { setPanelState('open'); setTab('timeline'); }
-              else if (tab === 'timeline') setPanelState('peek');
-              else setTab('timeline');
+              else if (tab !== 'timeline') setTab('timeline');
             }} className={`flex-1 flex items-center justify-center text-sm ${tab === 'timeline' ? 'text-blue-500 font-semibold border-b-2 border-blue-500' : 'text-gray-400'}`}>时间线</button>
           </div>
           {panelState === 'open' && (
             <div className="flex-1 min-h-0 overflow-y-auto">
               {tab === 'list'
                 ? <SpotList results={searchResults} tripId={id} spots={spots} currentTrip={currentTrip} onAdd={() => setTab('timeline')} myInfo={myInfo}
-                    pendingSpot={pendingSpotRef.current}
-                    onFocus={(poi) => {
-                      if (mapRef.current) {
-                        mapRef.current.map.setZoomAndCenter(16, [poi.location.lng, poi.location.lat]);
-                      }
-                    }} />
+                    pendingSpot={window.__travelPendingSpot}
+                    onFocus={(poi) => { mapRef.current?.map?.setZoomAndCenter(16, [poi.location.lng, poi.location.lat]); }} />
                 : <Timeline spots={spots} tripId={id} currentTrip={currentTrip} myParticipantId={myInfo?.participantId}
                     onFocus={(pos) => {
-                      if (!mapRef.current) return;
-                      mapRef.current.map.stopMove();
-                      mapRef.current.map.setZoomAndCenter(16, [pos.lng, pos.lat]);
+                      if (mapRef.current) {
+                        mapRef.current.map.stopMove();
+                        mapRef.current.map.setZoomAndCenter(16, [pos.lng, pos.lat]);
+                      }
                     }} />
               }
             </div>
