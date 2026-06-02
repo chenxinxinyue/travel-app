@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/cloudbase';
 
 const TripContext = createContext(null);
@@ -40,7 +40,7 @@ export function TripProvider({ children }) {
     setLoading(true);
     try {
       await ensureAuth();
-      const { data } = await db.collection('trips').orderBy('created_at', 'desc').get();
+      const { data } = await db.collection('trips').get();
       if (data) setTrips(data);
     } catch (e) {
       console.error('loadTrips error:', e);
@@ -57,17 +57,28 @@ export function TripProvider({ children }) {
     try {
       await ensureAuth();
       const [tripRes, partRes, spotRes, billRes] = await Promise.all([
-        db.collection('trips').doc(tripId).get(),
-        db.collection('participants').where({ trip_id: tripId }).get(),
-        db.collection('spots').where({ trip_id: tripId }).orderBy('day_number', 'asc').get(),
-        db.collection('bills').where({ trip_id: tripId }).orderBy('created_at', 'desc').get(),
+        db.collection('trips').doc(tripId).get().catch(e => { console.error('trips get error', e.message); return { data: [] }; }),
+        db.collection('participants').where({ trip_id: tripId }).get().catch(e => { console.error('participants error', e.message); return { data: [] }; }),
+        db.collection('spots').where({ trip_id: tripId }).get().catch(e => { console.error('spots error', e.message); return { data: [] }; }),
+        db.collection('bills').where({ trip_id: tripId }).get().catch(e => { console.error('bills error', e.message); return { data: [] }; }),
       ]);
-      if (tripRes.data && tripRes.data.length > 0) setCurrentTrip(tripRes.data[0]);
+      if (tripRes.data && tripRes.data.length > 0) {
+        setCurrentTrip(tripRes.data[0]);
+      } else {
+        console.warn('Trip not found:', tripId);
+        setCurrentTrip(null);
+      }
       if (partRes.data) setParticipants(partRes.data);
-      if (spotRes.data) setSpots(spotRes.data);
-      if (billRes.data) setBills(billRes.data);
+      if (spotRes.data) {
+        spotRes.data.sort((a, b) => a.day_number - b.day_number);
+        setSpots(spotRes.data);
+      }
+      if (billRes.data) {
+        billRes.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setBills(billRes.data);
+      }
     } catch (e) {
-      console.error('loadTrip error:', e);
+      console.error('loadTrip error:', e.message || e);
     } finally {
       setLoading(false);
     }
@@ -141,10 +152,11 @@ export function TripProvider({ children }) {
     await loadTrips();
   };
 
-  const value = {
+  const value = useMemo(() => ({
     trips, currentTrip, participants, spots, bills, loading,
     loadTrips, loadTrip, createTrip, joinTrip, deleteTrip, getMyParticipant,
-  };
+  }), [trips, currentTrip, participants, spots, bills, loading,
+      loadTrips, loadTrip, createTrip, joinTrip, deleteTrip, getMyParticipant]);
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
 }

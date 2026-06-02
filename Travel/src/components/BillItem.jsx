@@ -7,7 +7,7 @@ export default function BillItem({ bill, onDelete }) {
         <p className="text-sm truncate">{bill.item}</p>
         <p className="text-xs text-gray-400">{payer} 支付</p>
       </div>
-      <p className="text-sm font-semibold text-orange-500 shrink-0">¥{bill.amount.toFixed(2)}</p>
+      <p className="text-sm font-semibold text-orange-500 shrink-0">¥{(+bill.amount || 0).toFixed(2)}</p>
       <button onClick={() => onDelete(bill._id)}
         className="text-xs text-gray-300 active:text-red-400 shrink-0">删除</button>
     </div>

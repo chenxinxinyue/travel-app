@@ -38,7 +38,17 @@ export default function JoinTripModal({ open, onClose }) {
         <h2 className="text-xl font-bold">加入行程</h2>
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="你的昵称" value={nickname} onChange={(e) => setNickname(e.target.value)} />
-        <input className="w-full border rounded-lg px-3 py-2 text-sm uppercase" placeholder="邀请码" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} maxLength={6} />
+        <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="邀请码（6位字母数字）" value={inviteCode} onChange={(e) => {
+            const v = e.target.value;
+            // Find any 6-character alphanumeric sequence
+            const match = v.match(/[A-Za-z0-9]{6}/g);
+            if (match) {
+              // Take the last match (most likely the invite code, not random chars)
+              setInviteCode(match[match.length - 1].toUpperCase());
+            } else {
+              setInviteCode(v.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase());
+            }
+          }} />
         <button type="submit" disabled={submitting}
           className="w-full bg-blue-500 text-white rounded-lg py-2.5 font-semibold disabled:opacity-50">
           {submitting ? '加入中...' : '加入行程'}
